@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QDesktopServices
 from PyQt5.QtCore import QUrl
 
-BLUE_ACCENT = "#29b6f6"
+BLUE_ACCENT = "#2841E8"
 BLUE_BORDER = "#1e3a4a"
 BG_MAIN     = "#0f1a22"
 BG_CARD     = "#111e28"

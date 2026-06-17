@@ -18,14 +18,14 @@ from core.config import save_config
 import core.logger as logger
 
 # ── 블루 포인트 스타일시트 ───────────────────────────────────────────────────
-BLUE_ACCENT  = "#29b6f6"
+BLUE_ACCENT  = "#2841E8"
 BLUE_BORDER  = "#1e3a4a"
 BG_MAIN      = "#0f1a22"
 BG_GROUP     = "#111e28"
 BG_INPUT     = "#162030"
 FG_MAIN      = "#b0b0b0"
 FG_DIM       = "#666666"
-FG_TITLE     = "#29b6f6"
+FG_TITLE     = "#2841E8"
 
 STYLE = f"""
 QDialog {{
@@ -119,7 +119,7 @@ QPushButton#btn_save:hover {{
 
 # 프리셋 색상 (블루 중심)
 PRESET_COLORS = [
-    "#29b6f6",  # 밝은 파랑
+    "#2841E8",  # 밝은 파랑
     "#4fc3f7",  # 연한 파랑
     "#0288d1",  # 진한 파랑
     "#ef5350",  # 빨강

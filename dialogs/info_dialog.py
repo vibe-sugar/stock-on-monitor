@@ -6,7 +6,7 @@ from PyQt5.QtGui import QFont, QDesktopServices
 
 from core.constants import APP_NAME, APP_VERSION, APP_AUTHOR, APP_WEBSITE, APP_GITHUB
 
-BLUE_ACCENT = "#29b6f6"
+BLUE_ACCENT = "#2841E8"
 BLUE_BORDER = "#1e3a4a"
 BG_MAIN     = "#0f1a22"
 BG_INPUT    = "#162030"

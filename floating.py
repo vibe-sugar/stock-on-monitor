@@ -21,7 +21,7 @@ import core.logger as logger
 
 
 # ── 색상 팔레트 ──────────────────────────────────────────────────────────────
-BLUE_ACCENT  = "#29b6f6"
+BLUE_ACCENT  = "#2841E8"
 BLUE_LIGHT   = "#4fc3f7"
 RED_SOFT     = "#ef5350"
 FG_DEFAULT   = "#b0b0b0"
