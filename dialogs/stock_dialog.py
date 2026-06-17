@@ -1,6 +1,7 @@
 """
 종목 설정 다이얼로그
-- 저장 시 강제 종료 버그 수정: try/except 로 감싸고 signal emit 후 accept
+- 한국 주식 / 한국 ETF / 미국 주식·ETF 모두 지원
+- 저장 시 강제 종료 버그 수정: try/except 감쌈, signal emit 후 accept()
 - 블루 포인트 테마 적용
 - 드래그로 행 순서 변경 지원
 """
@@ -48,6 +49,7 @@ QComboBox QAbstractItemView {{
     color: {FG_MAIN};
     border: 1px solid {BLUE_BORDER};
     selection-background-color: #1a3a4a;
+    selection-color: {BLUE_ACCENT};
 }}
 QPushButton {{
     background: {BG_INPUT};
@@ -127,6 +129,20 @@ QScrollBar::add-line:vertical,
 QScrollBar::sub-line:vertical {{ height: 0; }}
 """
 
+# ── 시장 목록 정의 ────────────────────────────────────────────────────────────
+MARKET_OPTIONS = [
+    ("한국 주식  (KR)",    "KR"),
+    ("한국 ETF  (KR_ETF)", "KR_ETF"),
+    ("미국  (US)",         "US"),
+]
+
+# 시장 코드 → 표시 이름
+MARKET_LABEL = {
+    "KR"     : "KR",
+    "KR_ETF" : "ETF",
+    "US"     : "US",
+}
+
 
 class DraggableTable(QTableWidget):
     """드래그로 행 순서를 변경하는 테이블"""
@@ -149,12 +165,11 @@ class DraggableTable(QTableWidget):
         if self._drag_src is not None and dst is not None and self._drag_src != dst:
             self.row_moved.emit(self._drag_src, dst)
         self._drag_src = None
-        # 내부 이동은 직접 처리하므로 Qt 기본 동작은 무시
-        e.ignore()
+        e.ignore()   # 직접 처리하므로 Qt 기본 동작 무시
 
 
 class SearchThread(QThread):
-    """별도 스레드에서 종목 검색"""
+    """별도 스레드에서 종목/ETF 검색"""
     result = pyqtSignal(list)
 
     def __init__(self, market: str, query: str):
@@ -176,14 +191,14 @@ class StockDialog(QDialog):
 
     def __init__(self, data_dir: str, stocks: list, parent=None):
         super().__init__(parent)
-        self.data_dir        = data_dir
-        self.stocks          = [s.copy() for s in stocks]
-        self._sel_result     = None   # 검색에서 선택된 종목
-        self._search_thread  = None
-        self._old_threads    = []
+        self.data_dir       = data_dir
+        self.stocks         = [s.copy() for s in stocks]
+        self._sel_result    = None   # 검색에서 선택된 종목
+        self._search_thread = None
+        self._old_threads   = []
 
         self.setWindowTitle("종목 설정")
-        self.setMinimumSize(640, 520)
+        self.setMinimumSize(660, 560)
         self.setStyleSheet(STYLE)
         self._build_ui()
         self._refresh_table()
@@ -196,16 +211,26 @@ class StockDialog(QDialog):
         main.setContentsMargins(16, 16, 16, 16)
         main.setSpacing(10)
 
-        # 검색 영역
-        main.addWidget(self._section("▸ 종목 검색 및 추가"))
+        # ── 종목 검색 영역 ────────────────────────────────────────────────
+        main.addWidget(self._section("▸ 종목 / ETF 검색 및 추가"))
 
         row_search = QHBoxLayout()
+
+        # 시장 선택 콤보
         self.cmb_market = QComboBox()
-        self.cmb_market.addItems(["한국 (KR)", "미국 (US)"])
-        self.cmb_market.setFixedWidth(100)
+        for label, _ in MARKET_OPTIONS:
+            self.cmb_market.addItem(label)
+        self.cmb_market.setFixedWidth(160)
+        self.cmb_market.setToolTip(
+            "한국 주식 : 코스피·코스닥\n"
+            "한국 ETF  : KODEX·TIGER·KBSTAR 등 KR ETF 1140종\n"
+            "미국      : NYSE·NASDAQ 주식 및 ETF"
+        )
 
         self.edit_query = QLineEdit()
-        self.edit_query.setPlaceholderText("종목코드 또는 종목명  예) 005930  삼성전자  AAPL")
+        self.edit_query.setPlaceholderText(
+            "코드 또는 종목명  예) 005930  삼성전자  069500  KODEX 200  AAPL  SPY"
+        )
         self.edit_query.returnPressed.connect(self._search)
 
         btn_search = QPushButton("조회")
@@ -217,19 +242,19 @@ class StockDialog(QDialog):
         row_search.addWidget(btn_search)
         main.addLayout(row_search)
 
-        # 검색 결과 테이블
+        # ── 검색 결과 테이블 ──────────────────────────────────────────────
         self.tbl_search = QTableWidget(0, 3)
-        self.tbl_search.setHorizontalHeaderLabels(["코드", "종목명", "현재가"])
+        self.tbl_search.setHorizontalHeaderLabels(["코드", "종목명 / ETF명", "현재가"])
         self.tbl_search.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.tbl_search.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
         self.tbl_search.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.tbl_search.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tbl_search.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.tbl_search.setFixedHeight(110)
+        self.tbl_search.setFixedHeight(120)
         self.tbl_search.itemClicked.connect(self._on_search_clicked)
         main.addWidget(self.tbl_search)
 
-        # 매수 정보 입력
+        # ── 매수 정보 입력 ────────────────────────────────────────────────
         row_input = QHBoxLayout()
         self.edit_buy = QLineEdit()
         self.edit_buy.setPlaceholderText("매수단가")
@@ -248,8 +273,8 @@ class StockDialog(QDialog):
         row_input.addWidget(btn_add)
         main.addLayout(row_input)
 
-        # 저장된 종목 테이블
-        main.addWidget(self._section("▸ 저장된 종목  (행 드래그로 순서 변경)"))
+        # ── 저장된 종목 테이블 ────────────────────────────────────────────
+        main.addWidget(self._section("▸ 저장된 종목  (행 드래그로 순서 변경 가능)"))
 
         self.tbl_stocks = DraggableTable(0, 5)
         self.tbl_stocks.setHorizontalHeaderLabels(["시장", "코드", "종목명", "매수단가", "수량"])
@@ -263,7 +288,7 @@ class StockDialog(QDialog):
         self.tbl_stocks.row_moved.connect(self._on_row_moved)
         main.addWidget(self.tbl_stocks)
 
-        # 하단 버튼
+        # ── 하단 버튼 ─────────────────────────────────────────────────────
         row_btn = QHBoxLayout()
         self.btn_del = QPushButton("선택 삭제")
         self.btn_del.setObjectName("btn_del")
@@ -291,13 +316,21 @@ class StockDialog(QDialog):
         lbl.setStyleSheet(f"color: {BLUE_ACCENT}; background: transparent;")
         return lbl
 
+    def _get_selected_market(self) -> str:
+        """콤보박스 현재 선택 → market 코드 반환"""
+        idx = self.cmb_market.currentIndex()
+        if 0 <= idx < len(MARKET_OPTIONS):
+            return MARKET_OPTIONS[idx][1]
+        return "KR"
+
     # ── 검색 ─────────────────────────────────────────────────────────────────
 
     def _search(self):
-        query  = self.edit_query.text().strip()
+        query = self.edit_query.text().strip()
         if not query:
             return
-        market = "KR" if self.cmb_market.currentIndex() == 0 else "US"
+        market = self._get_selected_market()
+        logger.info(f"StockDialog search: market={market}, query={query!r}")
 
         # 이전 스레드 보관
         if self._search_thread and self._search_thread.isRunning():
@@ -322,7 +355,7 @@ class StockDialog(QDialog):
 
     def _on_search_result(self, results: list):
         if self.sender() is not self._search_thread:
-            return
+            return   # 이전 스레드 결과는 무시
 
         self.tbl_search.setSpan(0, 0, 1, 1)
         self.tbl_search.clearContents()
@@ -330,7 +363,9 @@ class StockDialog(QDialog):
         if not results:
             self.tbl_search.setRowCount(1)
             self.tbl_search.setSpan(0, 0, 1, 3)
-            it = QTableWidgetItem("검색 결과가 없습니다. 종목코드/종목명을 확인해주세요.")
+            it = QTableWidgetItem(
+                "검색 결과가 없습니다.  코드·종목명을 다시 확인하거나 시장을 변경해보세요."
+            )
             it.setTextAlignment(Qt.AlignCenter)
             it.setForeground(QColor(FG_DIM))
             it.setBackground(QColor(BG_TABLE))
@@ -340,11 +375,17 @@ class StockDialog(QDialog):
 
         self.tbl_search.setRowCount(len(results))
         for i, r in enumerate(results):
-            vals = [r["code"], r["name"], f"{r['price']:,.2f}" if r["market"] == "US" else f"{r['price']:,.0f}"]
+            market = r["market"]
+            price  = r["price"]
+            # 원화는 정수, 달러는 소수 2자리
+            price_str = f"{price:,.2f}" if market == "US" else f"{price:,.0f}"
+            vals = [r["code"], r["name"], price_str]
             for col, val in enumerate(vals):
                 it = QTableWidgetItem(val)
                 it.setBackground(QColor(BG_TABLE))
-                it.setForeground(QColor(FG_MAIN))
+                # ETF 이름은 파란색으로 구분
+                fg = BLUE_ACCENT if market == "KR_ETF" else FG_MAIN
+                it.setForeground(QColor(fg))
                 self.tbl_search.setItem(i, col, it)
 
         # 결과 1건이면 자동 선택
@@ -362,13 +403,13 @@ class StockDialog(QDialog):
     def _on_search_clicked(self, item):
         row = item.row()
         if self.tbl_search.columnSpan(row, 0) > 1:
-            return   # "조회 중" 또는 "없음" 행
+            return   # "조회 중" / "없음" 행
         code_it  = self.tbl_search.item(row, 0)
         name_it  = self.tbl_search.item(row, 1)
         price_it = self.tbl_search.item(row, 2)
         if not code_it:
             return
-        market = "KR" if self.cmb_market.currentIndex() == 0 else "US"
+        market = self._get_selected_market()
         try:
             price = float(price_it.text().replace(",", ""))
         except Exception:
@@ -379,13 +420,13 @@ class StockDialog(QDialog):
             "market": market,
             "price" : price,
         }
-        logger.debug(f"search row selected: {self._sel_result['code']} {self._sel_result['name']}")
+        logger.debug(f"search selected: {self._sel_result['code']} ({self._sel_result['market']})")
 
     # ── 종목 추가 ─────────────────────────────────────────────────────────────
 
     def _add_stock(self):
         if not self._sel_result:
-            QMessageBox.warning(self, "알림", "먼저 종목을 조회하고 선택하세요.")
+            QMessageBox.warning(self, "알림", "먼저 종목 / ETF를 조회하고 선택하세요.")
             return
         try:
             buy = float(self.edit_buy.text().replace(",", ""))
@@ -397,15 +438,19 @@ class StockDialog(QDialog):
             QMessageBox.warning(self, "입력 오류", "매수단가와 수량은 0보다 커야 합니다.")
             return
 
-        self.stocks.append({
+        new_stock = {
             "market"   : self._sel_result["market"],
             "code"     : self._sel_result["code"],
             "name"     : self._sel_result["name"],
             "buy_price": buy,
             "quantity" : qty,
             "active"   : True,
-        })
-        logger.info(f"stock added: {self._sel_result['code']} buy={buy} qty={qty}")
+        }
+        self.stocks.append(new_stock)
+        logger.info(
+            f"stock added: {new_stock['code']} ({new_stock['market']}) "
+            f"buy={buy} qty={qty}"
+        )
         self._sel_result = None
         self.edit_buy.clear()
         self.edit_qty.clear()
@@ -421,7 +466,6 @@ class StockDialog(QDialog):
         if not rows:
             QMessageBox.warning(self, "알림", "삭제할 종목을 선택하세요.")
             return
-        # 모두 삭제되는 케이스 방지
         if len(self.stocks) - len(rows) < 1:
             QMessageBox.warning(self, "삭제 불가", "최소 1개 종목은 유지해야 합니다.")
             return
@@ -448,8 +492,9 @@ class StockDialog(QDialog):
     def _refresh_table(self):
         self.tbl_stocks.setRowCount(len(self.stocks))
         for i, s in enumerate(self.stocks):
+            market = s.get("market", "KR")
             vals = [
-                s.get("market", "KR"),
+                MARKET_LABEL.get(market, market),   # 시장 표시명
                 s.get("code", ""),
                 s.get("name", ""),
                 f"{s.get('buy_price', 0):,.0f}",
@@ -458,7 +503,12 @@ class StockDialog(QDialog):
             for col, val in enumerate(vals):
                 it = QTableWidgetItem(val)
                 it.setBackground(QColor(BG_TABLE))
-                it.setForeground(QColor(FG_MAIN))
+                # ETF 행은 파랑으로 강조
+                if market == "KR_ETF":
+                    fg = BLUE_ACCENT if col == 0 else FG_MAIN
+                else:
+                    fg = FG_MAIN
+                it.setForeground(QColor(fg))
                 # 종목명(2), 매수단가(3), 수량(4) 편집 가능
                 if col in (2, 3, 4):
                     it.setFlags(it.flags() | Qt.ItemIsEditable)
