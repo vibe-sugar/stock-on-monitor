@@ -19,7 +19,6 @@ FG_TITLE    = "#cccccc"
 
 STYLE = f"""
 QDialog  {{ background: {BG_MAIN}; }}
-QWidget  {{ background: {BG_MAIN}; }}
 QLabel   {{ color: {FG_MAIN}; background: transparent; }}
 QPushButton {{
     background: {BG_INPUT};
@@ -105,17 +104,19 @@ class LicenseDialog(QDialog):
         scroll.setStyleSheet(f"QScrollArea {{ border: none; }}")
 
         container = QWidget()
-        container.setStyleSheet(f"background: {BG_MAIN};")
+        container.setObjectName("scroll_container")
+        container.setStyleSheet(f"QWidget#scroll_container {{ background: {BG_MAIN}; }}")
         vbox = QVBoxLayout()
         vbox.setContentsMargins(0, 0, 6, 0)
         vbox.setSpacing(6)
 
-        for lib in LICENSES:
+        for i, lib in enumerate(LICENSES):
             card = QWidget()
+            card.setObjectName(f"card_{i}")
             card.setStyleSheet(f"""
-                QWidget {{
+                QWidget#card_{i} {{
                     background: {BG_CARD};
-                    border: 1px solid {BLUE_BORDER};
+                    border: none;
                     border-radius: 6px;
                 }}
             """)

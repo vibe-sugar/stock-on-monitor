@@ -67,6 +67,8 @@ def default_config() -> dict:
         "show_total"      : False,
         "show_summary"    : False,
         "interval_ms"     : 10000,
+        "border_width"    : 0,           # 0 = 테두리 없음
+        "border_color"    : "#1e3a4a",
     }
 
 

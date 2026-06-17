@@ -228,7 +228,7 @@ class SettingsDialog(QDialog):
         self.cfg      = cfg.copy()
 
         self.setWindowTitle("환경 설정")
-        self.setFixedSize(430, 580)
+        self.setFixedSize(430, 650)
         self.setStyleSheet(STYLE)
         self._build_ui()
         logger.debug("SettingsDialog opened")
@@ -330,6 +330,25 @@ class SettingsDialog(QDialog):
         grp_show.setLayout(g3)
         layout.addWidget(grp_show)
 
+        # ── 테두리 ────────────────────────────────────────────────────────
+        grp_border = QGroupBox("테두리")
+        g_bd = QGridLayout()
+        g_bd.setSpacing(8)
+        g_bd.setColumnStretch(1, 1)
+
+        g_bd.addWidget(QLabel("두께 (0=없음)"), 0, 0)
+        self.spn_border_width = QSpinBox()
+        self.spn_border_width.setRange(0, 5)
+        self.spn_border_width.setValue(int(self.cfg.get("border_width", 0)))
+        g_bd.addWidget(self.spn_border_width, 0, 1, Qt.AlignLeft)
+
+        g_bd.addWidget(QLabel("테두리 색상"), 1, 0)
+        self.btn_border_color = ColorButton(self.cfg.get("border_color", "#1e3a4a"))
+        g_bd.addWidget(self.btn_border_color, 1, 1, Qt.AlignLeft)
+
+        grp_border.setLayout(g_bd)
+        layout.addWidget(grp_border)
+
         # ── 하단 버튼 ──────────────────────────────────────────────────────
         btn_row = QHBoxLayout()
         btn_save  = QPushButton("저장하기")
@@ -361,6 +380,8 @@ class SettingsDialog(QDialog):
             self.cfg["invert_color"]     = self.chk_invert.isChecked()
             for key, chk in self.chk_map.items():
                 self.cfg[key] = chk.isChecked()
+            self.cfg["border_width"]  = self.spn_border_width.value()
+            self.cfg["border_color"]  = self.btn_border_color.get_color()
 
             save_config(self.data_dir, self.cfg)
             logger.info("Settings saved successfully")
