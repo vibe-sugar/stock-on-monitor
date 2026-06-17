@@ -1,0 +1,6 @@
+PyQt5
+yfinance
+finance-datareader
+pandas
+pywin32
+pyinstaller
