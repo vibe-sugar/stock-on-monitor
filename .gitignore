@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# StockOnMonitor data folder (user-specific, do not commit)
+data/debug.log
+data/config.json
+data/stocks.json
+# debug.bin is committed as template (contains '0' by default)
+
