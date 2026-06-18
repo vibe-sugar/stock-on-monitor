@@ -20,25 +20,25 @@ from core.fetcher import fetch_price
 import core.logger as logger
 
 
-# ── 색상 팔레트 ──────────────────────────────────────────────────────────────
-BLUE_ACCENT  = "#2841E8"
-BLUE_LIGHT   = "#4fc3f7"
-RED_SOFT     = "#ef5350"
-FG_DEFAULT   = "#b0b0b0"
-FG_DIM       = "#666666"
-BG_CARD      = "#0d0d0d"
+# ── 디자인 토큰 ──────────────────────────────────────────────────────────────
+BLUE_ACCENT  = "#5D87F6"   # 포인트 파랑 (ACCENT)
+BLUE_LIGHT   = "#7B9FFF"   # 상승 색상 (연한 파랑)
+RED_SOFT     = "#F06292"   # 하락 색상 (분홍)
+FG_DEFAULT   = "#D8DEF0"   # 주요 텍스트
+FG_DIM       = "#4A5578"   # 희미한 텍스트
+BG_CARD      = "#1A1F2E"   # 플로팅 카드 기본 배경
 
 MENU_STYLE = f"""
 QMenu {{
-    background: #0f1f2a;
+    background: #1E2438;
     color: {FG_DEFAULT};
-    border: 1px solid #1e3a4a;
+    border: 1px solid #2D3A5C;
     padding: 4px;
-    border-radius: 4px;
+    border-radius: 6px;
 }}
-QMenu::item {{ padding: 6px 20px; border-radius: 3px; }}
-QMenu::item:selected {{ background: #1a3a4a; color: {BLUE_ACCENT}; }}
-QMenu::separator {{ background: #1e3a4a; height: 1px; margin: 3px 4px; }}
+QMenu::item {{ padding: 7px 22px; border-radius: 4px; font-size: 9pt; }}
+QMenu::item:selected {{ background: #132859; color: {BLUE_ACCENT}; }}
+QMenu::separator {{ background: #2D3A5C; height: 1px; margin: 3px 6px; }}
 """
 
 
@@ -224,7 +224,7 @@ class FloatingWidget(QWidget):
         tbl.setStyleSheet("""
             QTableWidget {
                 background: transparent; border: none;
-                gridline-color: rgba(41,182,246,8);
+                gridline-color: rgba(93,135,246,10);
             }
             QTableWidget::item {
                 padding: 1px 3px; border: none; background: transparent;

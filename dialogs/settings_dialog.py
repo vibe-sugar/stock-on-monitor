@@ -1,7 +1,16 @@
 """
 환경설정 다이얼로그
-- 저장 시 강제 종료 버그 수정: try/except 로 감싸고 signal 은 close() 이후가 아닌 close() 전에 emit
-- 블루 포인트 테마 적용
+디자인 시스템:
+  ACCENT      #5D87F6  — 밝은 파랑 (포인트, 활성 상태, 링크)
+  ACCENT_DARK #111726  — 아주 어두운 네이비 (그룹박스 배경, 인풋 배경)
+  BTN_BG      #132859  — 버튼 배경 (짙은 네이비)
+  BTN_FG      #577CF7  — 버튼 글씨 (중간 파랑)
+  BG_MAIN     #1A1F2E  — 다이얼로그/화면 배경 (다크 그레이-블루)
+  BG_SURFACE  #222840  — 카드/그룹 배경
+  BORDER      #2D3A5C  — 구분선/테두리 (절제된 블루-그레이)
+  FG_PRIMARY  #D8DEF0  — 주요 텍스트 (밝은 블루-화이트)
+  FG_SECONDARY #7A8AB0 — 보조 텍스트 (중간 블루-그레이)
+  FG_MUTED    #4A5578  — 희미한 텍스트
 """
 
 from __future__ import annotations
@@ -17,138 +26,181 @@ from PyQt5.QtGui import QFont, QColor
 from core.config import save_config
 import core.logger as logger
 
-# ── 블루 포인트 스타일시트 ───────────────────────────────────────────────────
-BLUE_ACCENT  = "#2841E8"
-BLUE_BORDER  = "#1e3a4a"
-BG_MAIN      = "#0f1a22"
-BG_GROUP     = "#111e28"
-BG_INPUT     = "#162030"
-FG_MAIN      = "#b0b0b0"
-FG_DIM       = "#666666"
-FG_TITLE     = "#2841E8"
+# ── 디자인 토큰 ────────────────────────────────────────────────────────────────
+ACCENT       = "#5D87F6"   # 밝은 파랑 — 포인트
+ACCENT_DARK  = "#111726"   # 아주 어두운 네이비
+BTN_BG       = "#132859"   # 버튼 배경
+BTN_FG       = "#577CF7"   # 버튼 글씨
+BG_MAIN      = "#1A1F2E"   # 다이얼로그 배경
+BG_SURFACE   = "#222840"   # 그룹박스 배경
+BORDER       = "#2D3A5C"   # 테두리
+FG_PRIMARY   = "#D8DEF0"   # 주요 텍스트
+FG_SECONDARY = "#7A8AB0"   # 보조 텍스트
+FG_MUTED     = "#4A5578"   # 희미한 텍스트
+RED_SOFT     = "#F06292"   # 위험/삭제 액션
+
+# 프리셋 색상 (ACCENT 중심 12개)
+PRESET_COLORS = [
+    "#5D87F6",  # ACCENT 파랑
+    "#7B9FFF",  # 연한 파랑
+    "#577CF7",  # BTN_FG 파랑
+    "#3D6FE0",  # 진한 파랑
+    "#A78BFA",  # 보라
+    "#67E8F9",  # 시안
+    "#34D399",  # 민트 초록
+    "#F0A3A3",  # 연한 빨강
+    "#F06292",  # 분홍
+    "#FFD700",  # 골드
+    "#D8DEF0",  # FG_PRIMARY 흰색
+    "#7A8AB0",  # FG_SECONDARY 회색
+]
 
 STYLE = f"""
 QDialog {{
     background: {BG_MAIN};
 }}
 QGroupBox {{
-    background: {BG_GROUP};
-    color: {FG_TITLE};
-    border: 1px solid {BLUE_BORDER};
-    border-radius: 6px;
-    margin-top: 10px;
-    padding-top: 10px;
+    background: {BG_SURFACE};
+    color: {ACCENT};
+    border: 1px solid {BORDER};
+    border-radius: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
     font-weight: bold;
+    font-size: 9pt;
 }}
 QGroupBox::title {{
     subcontrol-origin: margin;
-    left: 10px;
-    color: {BLUE_ACCENT};
+    left: 12px;
+    padding: 0 4px;
+    color: {ACCENT};
 }}
 QLabel {{
-    color: {FG_MAIN};
+    color: {FG_PRIMARY};
     background: transparent;
+    font-size: 9pt;
 }}
 QCheckBox {{
-    color: {FG_MAIN};
+    color: {FG_PRIMARY};
     background: transparent;
-    spacing: 6px;
+    spacing: 8px;
+    font-size: 9pt;
 }}
 QCheckBox::indicator {{
-    width: 14px; height: 14px;
-    background: {BG_INPUT};
-    border: 1px solid {BLUE_BORDER};
-    border-radius: 3px;
+    width: 15px;
+    height: 15px;
+    background: {ACCENT_DARK};
+    border: 1px solid {BORDER};
+    border-radius: 4px;
 }}
 QCheckBox::indicator:checked {{
-    background: {BLUE_ACCENT};
-    border: 1px solid {BLUE_ACCENT};
+    background: {ACCENT};
+    border: 1px solid {ACCENT};
+    image: none;
 }}
 QCheckBox::indicator:disabled {{
-    background: #1a2a3a;
-    border: 1px solid #1e3a4a;
+    background: {BG_SURFACE};
+    border: 1px solid {FG_MUTED};
 }}
 QSlider::groove:horizontal {{
-    background: {BG_INPUT};
-    height: 4px;
-    border-radius: 2px;
+    background: {ACCENT_DARK};
+    height: 5px;
+    border-radius: 3px;
+    border: 1px solid {BORDER};
 }}
 QSlider::handle:horizontal {{
-    background: {BLUE_ACCENT};
-    width: 14px; height: 14px;
+    background: {ACCENT};
+    width: 15px;
+    height: 15px;
     margin: -5px 0;
-    border-radius: 7px;
+    border-radius: 8px;
+    border: 2px solid {BG_MAIN};
 }}
 QSlider::sub-page:horizontal {{
-    background: {BLUE_ACCENT};
-    border-radius: 2px;
+    background: {ACCENT};
+    border-radius: 3px;
 }}
 QSpinBox {{
-    background: {BG_INPUT};
-    color: {FG_MAIN};
-    border: 1px solid {BLUE_BORDER};
-    border-radius: 4px;
-    padding: 2px 6px;
+    background: {ACCENT_DARK};
+    color: {FG_PRIMARY};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 9pt;
+    min-width: 56px;
+}}
+QSpinBox:focus {{
+    border-color: {ACCENT};
 }}
 QSpinBox::up-button, QSpinBox::down-button {{
-    background: {BG_INPUT};
+    background: {ACCENT_DARK};
     border: none;
+    width: 16px;
 }}
 QPushButton {{
-    background: {BG_INPUT};
-    color: {FG_MAIN};
-    border: 1px solid {BLUE_BORDER};
-    border-radius: 4px;
-    padding: 5px 14px;
+    background: {BTN_BG};
+    color: {BTN_FG};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 9pt;
 }}
 QPushButton:hover {{
-    background: #1a3a4a;
-    color: {BLUE_ACCENT};
-    border-color: {BLUE_ACCENT};
+    background: #1C3A7A;
+    color: {ACCENT};
+    border-color: {ACCENT};
+}}
+QPushButton:pressed {{
+    background: {ACCENT_DARK};
 }}
 QPushButton#btn_save {{
-    background: #0e2a3a;
-    color: {BLUE_ACCENT};
-    border: 1px solid {BLUE_ACCENT};
+    background: {ACCENT};
+    color: #FFFFFF;
+    border: 1px solid {ACCENT};
     font-weight: bold;
+    padding: 7px 22px;
+    font-size: 9pt;
 }}
 QPushButton#btn_save:hover {{
-    background: #1a3a4a;
+    background: #4A74E8;
+    border-color: #4A74E8;
+}}
+QPushButton#btn_cancel {{
+    background: {BG_SURFACE};
+    color: {FG_SECONDARY};
+    border: 1px solid {BORDER};
+}}
+QPushButton#btn_cancel:hover {{
+    color: {FG_PRIMARY};
+    border-color: {FG_SECONDARY};
 }}
 """
-
-# 프리셋 색상 (블루 중심)
-PRESET_COLORS = [
-    "#2841E8",  # 밝은 파랑
-    "#4fc3f7",  # 연한 파랑
-    "#0288d1",  # 진한 파랑
-    "#ef5350",  # 빨강
-    "#ff8a65",  # 주황
-    "#ffd54f",  # 노랑
-    "#81c784",  # 녹색
-    "#ffffff",  # 흰색
-    "#cccccc",  # 밝은 회색
-    "#aaaaaa",  # 중간 회색
-    "#666666",  # 어두운 회색
-    "#333333",  # 매우 어두운 회색
-]
 
 
 class ColorButton(QPushButton):
     """색상 선택 버튼"""
     color_changed = pyqtSignal(str)
 
-    def __init__(self, color: str = "#aaaaaa"):
+    def __init__(self, color: str = "#7A8AB0"):
         super().__init__()
-        self.setFixedSize(60, 24)
+        self.setFixedSize(64, 26)
         self._color = color
         self._apply()
         self.clicked.connect(self._pick)
 
     def _apply(self):
+        # 버튼 배경색에 따라 텍스트 명도 자동 결정
+        c = QColor(self._color)
+        luminance = 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()
+        text_col = "#111726" if luminance > 128 else "#D8DEF0"
         self.setStyleSheet(
-            f"background:{self._color}; border:1px solid {BLUE_BORDER}; border-radius:4px;"
+            f"background: {self._color};"
+            f"color: {text_col};"
+            f"border: 1px solid {BORDER};"
+            f"border-radius: 6px;"
+            f"font-size: 8pt;"
         )
+        self.setText(self._color.upper())
 
     def set_color(self, hex_color: str):
         self._color = hex_color
@@ -171,29 +223,40 @@ class ColorPickerDialog(QDialog):
     def __init__(self, current: str, parent=None):
         super().__init__(parent)
         self.setWindowTitle("색상 선택")
-        self.setFixedSize(296, 130)
-        self.setStyleSheet(STYLE)
+        self.setFixedSize(320, 140)
+        self.setStyleSheet(f"""
+            QDialog  {{ background: {BG_MAIN}; }}
+            QLabel   {{ color: {FG_PRIMARY}; background: transparent; }}
+            QPushButton {{
+                background: {BTN_BG}; color: {BTN_FG};
+                border: 1px solid {BORDER}; border-radius: 5px; padding: 4px 12px;
+            }}
+            QPushButton:hover {{ background: #1C3A7A; color: {ACCENT}; border-color: {ACCENT}; }}
+        """)
         self._color = current
         self._build_ui()
 
     def _build_ui(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(12, 12, 12, 10)
-        layout.setSpacing(8)
+        layout.setContentsMargins(14, 14, 14, 12)
+        layout.setSpacing(10)
 
         grid = QGridLayout()
-        grid.setSpacing(4)
+        grid.setSpacing(5)
         for i, color in enumerate(PRESET_COLORS):
             btn = QPushButton()
-            btn.setFixedSize(36, 36)
+            btn.setFixedSize(38, 38)
+            is_sel = (color.lower() == self._color.lower())
+            border_col = ACCENT if is_sel else BORDER
+            border_w   = "3px" if is_sel else "1px"
             btn.setStyleSheet(f"""
                 QPushButton {{
                     background: {color};
-                    border: 2px solid #1e3a4a;
-                    border-radius: 4px;
+                    border: {border_w} solid {border_col};
+                    border-radius: 6px;
                 }}
                 QPushButton:hover {{
-                    border: 2px solid {BLUE_ACCENT};
+                    border: 2px solid {ACCENT};
                 }}
             """)
             btn.clicked.connect(lambda _, c=color: self._pick(c))
@@ -228,87 +291,119 @@ class SettingsDialog(QDialog):
         self.cfg      = cfg.copy()
 
         self.setWindowTitle("환경 설정")
-        self.setFixedSize(430, 650)
+        self.setFixedSize(440, 660)
         self.setStyleSheet(STYLE)
         self._build_ui()
         logger.debug("SettingsDialog opened")
 
     def _build_ui(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setContentsMargins(18, 18, 18, 18)
         layout.setSpacing(10)
 
-        # ── 외관 ──────────────────────────────────────────────────────────
-        grp_ap = QGroupBox("외관")
+        # ── 외관 ──────────────────────────────────────────────────────────────
+        grp_ap = QGroupBox("  외관")
         g1 = QGridLayout()
-        g1.setSpacing(8)
+        g1.setSpacing(9)
         g1.setColumnStretch(1, 1)
+        g1.setContentsMargins(14, 8, 14, 12)
 
-        g1.addWidget(QLabel("배경색"), 0, 0)
+        g1.addWidget(self._lbl("배경색"), 0, 0)
         self.btn_bg = ColorButton(self.cfg.get("bg_color", "#0d0d0d"))
         g1.addWidget(self.btn_bg, 0, 1, Qt.AlignLeft)
 
-        g1.addWidget(QLabel("배경 투명도"), 1, 0)
+        g1.addWidget(self._lbl("배경 투명도"), 1, 0)
         self.sld_alpha = QSlider(Qt.Horizontal)
         self.sld_alpha.setRange(0, 11)
         alpha_step = round((self.cfg.get("bg_alpha", 220) - 30) / 225 * 11)
         self.sld_alpha.setValue(max(0, min(11, alpha_step)))
         self.lbl_alpha = QLabel(str(self._step_to_alpha(self.sld_alpha.value())))
-        self.lbl_alpha.setFixedWidth(30)
+        self.lbl_alpha.setFixedWidth(32)
+        self.lbl_alpha.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent;")
         self.sld_alpha.valueChanged.connect(
             lambda v: self.lbl_alpha.setText(str(self._step_to_alpha(v)))
         )
         row_a = QHBoxLayout()
+        row_a.setSpacing(8)
         row_a.addWidget(self.sld_alpha)
         row_a.addWidget(self.lbl_alpha)
         g1.addLayout(row_a, 1, 1)
 
-        g1.addWidget(QLabel("글자 크기"), 2, 0)
+        g1.addWidget(self._lbl("글자 크기"), 2, 0)
         self.spn_font = QSpinBox()
         self.spn_font.setRange(6, 20)
         self.spn_font.setValue(self.cfg.get("font_size", 9))
         g1.addWidget(self.spn_font, 2, 1, Qt.AlignLeft)
 
-        g1.addWidget(QLabel("글자 색상"), 3, 0)
+        g1.addWidget(self._lbl("글자 색상"), 3, 0)
         self.btn_font_color = ColorButton(self.cfg.get("font_color", "#b0b0b0"))
         g1.addWidget(self.btn_font_color, 3, 1, Qt.AlignLeft)
 
         grp_ap.setLayout(g1)
         layout.addWidget(grp_ap)
 
-        # ── 동작 ──────────────────────────────────────────────────────────
-        grp_act = QGroupBox("동작")
+        # ── 테두리 ────────────────────────────────────────────────────────────
+        grp_border = QGroupBox("  테두리")
+        g_bd = QGridLayout()
+        g_bd.setSpacing(9)
+        g_bd.setColumnStretch(1, 1)
+        g_bd.setContentsMargins(14, 8, 14, 12)
+
+        g_bd.addWidget(self._lbl("두께  (0 = 없음)"), 0, 0)
+        self.spn_border_width = QSpinBox()
+        self.spn_border_width.setRange(0, 5)
+        self.spn_border_width.setValue(int(self.cfg.get("border_width", 0)))
+        g_bd.addWidget(self.spn_border_width, 0, 1, Qt.AlignLeft)
+
+        g_bd.addWidget(self._lbl("테두리 색상"), 1, 0)
+        self.btn_border_color = ColorButton(self.cfg.get("border_color", "#2D3A5C"))
+        g_bd.addWidget(self.btn_border_color, 1, 1, Qt.AlignLeft)
+
+        grp_border.setLayout(g_bd)
+        layout.addWidget(grp_border)
+
+        # ── 동작 ──────────────────────────────────────────────────────────────
+        grp_act = QGroupBox("  동작")
         g_act = QVBoxLayout()
+        g_act.setSpacing(8)
+        g_act.setContentsMargins(14, 8, 14, 12)
 
         self.chk_always_on_top = QCheckBox("항상 위에 표시")
         self.chk_always_on_top.setChecked(self.cfg.get("always_on_top", True))
         g_act.addWidget(self.chk_always_on_top)
 
-        g_act.addWidget(QLabel("갱신 주기 (초)"))
+        row_iv = QHBoxLayout()
+        row_iv.addWidget(self._lbl("갱신 주기 (초)"))
+        row_iv.addSpacing(8)
         self.spn_interval = QSpinBox()
         self.spn_interval.setRange(3, 300)
         self.spn_interval.setValue(max(3, self.cfg.get("interval_ms", 10000) // 1000))
-        g_act.addWidget(self.spn_interval)
+        row_iv.addWidget(self.spn_interval)
+        row_iv.addStretch()
+        g_act.addLayout(row_iv)
 
         grp_act.setLayout(g_act)
         layout.addWidget(grp_act)
 
-        # ── 증감 색상 ──────────────────────────────────────────────────────
-        grp_clr = QGroupBox("증감 색상")
+        # ── 증감 색상 ─────────────────────────────────────────────────────────
+        grp_clr = QGroupBox("  증감 색상")
         g2 = QVBoxLayout()
-        self.chk_use_color = QCheckBox("증감 색상 사용")
+        g2.setSpacing(8)
+        g2.setContentsMargins(14, 8, 14, 12)
+        self.chk_use_color = QCheckBox("증감 색상 사용  (상승 파랑 / 하락 빨강)")
         self.chk_use_color.setChecked(self.cfg.get("use_change_color", True))
-        self.chk_invert = QCheckBox("색상 반전  (상승=빨강, 하락=파랑)")
+        self.chk_invert = QCheckBox("색상 반전  (상승 빨강 / 하락 파랑)")
         self.chk_invert.setChecked(self.cfg.get("invert_color", False))
         g2.addWidget(self.chk_use_color)
         g2.addWidget(self.chk_invert)
         grp_clr.setLayout(g2)
         layout.addWidget(grp_clr)
 
-        # ── 표시 항목 ──────────────────────────────────────────────────────
-        grp_show = QGroupBox("플로팅 표시 항목")
+        # ── 표시 항목 ─────────────────────────────────────────────────────────
+        grp_show = QGroupBox("  표시 항목")
         g3 = QGridLayout()
-        g3.setSpacing(6)
+        g3.setSpacing(7)
+        g3.setContentsMargins(14, 8, 14, 12)
 
         checks = [
             ("show_name",       "종목명"),
@@ -330,38 +425,28 @@ class SettingsDialog(QDialog):
         grp_show.setLayout(g3)
         layout.addWidget(grp_show)
 
-        # ── 테두리 ────────────────────────────────────────────────────────
-        grp_border = QGroupBox("테두리")
-        g_bd = QGridLayout()
-        g_bd.setSpacing(8)
-        g_bd.setColumnStretch(1, 1)
-
-        g_bd.addWidget(QLabel("두께 (0=없음)"), 0, 0)
-        self.spn_border_width = QSpinBox()
-        self.spn_border_width.setRange(0, 5)
-        self.spn_border_width.setValue(int(self.cfg.get("border_width", 0)))
-        g_bd.addWidget(self.spn_border_width, 0, 1, Qt.AlignLeft)
-
-        g_bd.addWidget(QLabel("테두리 색상"), 1, 0)
-        self.btn_border_color = ColorButton(self.cfg.get("border_color", "#1e3a4a"))
-        g_bd.addWidget(self.btn_border_color, 1, 1, Qt.AlignLeft)
-
-        grp_border.setLayout(g_bd)
-        layout.addWidget(grp_border)
-
-        # ── 하단 버튼 ──────────────────────────────────────────────────────
+        # ── 하단 버튼 ─────────────────────────────────────────────────────────
+        layout.addSpacing(4)
         btn_row = QHBoxLayout()
-        btn_save  = QPushButton("저장하기")
+        btn_row.setSpacing(8)
+        btn_save   = QPushButton("저장하기")
         btn_save.setObjectName("btn_save")
         btn_save.clicked.connect(self._save)
-        btn_close = QPushButton("취소")
-        btn_close.clicked.connect(self.reject)
+        btn_cancel = QPushButton("취소")
+        btn_cancel.setObjectName("btn_cancel")
+        btn_cancel.clicked.connect(self.reject)
         btn_row.addStretch()
+        btn_row.addWidget(btn_cancel)
         btn_row.addWidget(btn_save)
-        btn_row.addWidget(btn_close)
         layout.addLayout(btn_row)
 
         self.setLayout(layout)
+
+    @staticmethod
+    def _lbl(text: str) -> QLabel:
+        l = QLabel(text)
+        l.setStyleSheet(f"color: {FG_PRIMARY}; background: transparent; font-size: 9pt;")
+        return l
 
     @staticmethod
     def _step_to_alpha(step: int) -> int:
@@ -378,15 +463,14 @@ class SettingsDialog(QDialog):
             self.cfg["interval_ms"]      = self.spn_interval.value() * 1000
             self.cfg["use_change_color"] = self.chk_use_color.isChecked()
             self.cfg["invert_color"]     = self.chk_invert.isChecked()
+            self.cfg["border_width"]     = self.spn_border_width.value()
+            self.cfg["border_color"]     = self.btn_border_color.get_color()
             for key, chk in self.chk_map.items():
                 self.cfg[key] = chk.isChecked()
-            self.cfg["border_width"]  = self.spn_border_width.value()
-            self.cfg["border_color"]  = self.btn_border_color.get_color()
 
             save_config(self.data_dir, self.cfg)
             logger.info("Settings saved successfully")
 
-            # 먼저 signal emit → 그 다음 닫기
             self.settings_updated.emit(self.cfg.copy())
             self.accept()
 

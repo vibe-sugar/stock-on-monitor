@@ -2,7 +2,7 @@
 종목 설정 다이얼로그
 - 한국 주식 / 한국 ETF / 미국 주식·ETF 모두 지원
 - 저장 시 강제 종료 버그 수정: try/except 감쌈, signal emit 후 accept()
-- 블루 포인트 테마 적용
+- 디자인 시스템 통일 (BG_MAIN #1A1F2E, ACCENT #5D87F6, BTN_BG #132859)
 - 드래그로 행 순서 변경 지원
 """
 
@@ -20,123 +20,160 @@ from core.config import save_stocks
 from core.fetcher import search_stocks
 import core.logger as logger
 
-# ── 블루 포인트 스타일시트 ────────────────────────────────────────────────────
-BLUE_ACCENT = "#2841E8"
-BLUE_BORDER = "#1e3a4a"
-BG_MAIN     = "#0f1a22"
-BG_INPUT    = "#162030"
-BG_TABLE    = "#111e28"
-FG_MAIN     = "#b0b0b0"
-FG_DIM      = "#666666"
+# ── 디자인 토큰 ────────────────────────────────────────────────────────────────
+ACCENT       = "#5D87F6"
+ACCENT_DARK  = "#111726"
+BTN_BG       = "#132859"
+BTN_FG       = "#577CF7"
+BG_MAIN      = "#1A1F2E"
+BG_SURFACE   = "#222840"
+BG_TABLE     = "#1C2236"
+BORDER       = "#2D3A5C"
+FG_PRIMARY   = "#D8DEF0"
+FG_SECONDARY = "#7A8AB0"
+FG_MUTED     = "#4A5578"
+ETF_COLOR    = "#A78BFA"   # ETF 강조 — 보라 계열
+RED_SOFT     = "#F06292"
 
 STYLE = f"""
 QDialog  {{ background: {BG_MAIN}; }}
 QWidget  {{ background: {BG_MAIN}; }}
-QLabel   {{ color: {FG_MAIN}; background: transparent; }}
+QLabel   {{ color: {FG_PRIMARY}; background: transparent; font-size: 9pt; }}
 QLineEdit, QComboBox {{
-    background: {BG_INPUT};
-    color: {FG_MAIN};
-    border: 1px solid {BLUE_BORDER};
-    border-radius: 4px;
-    padding: 4px 8px;
+    background: {ACCENT_DARK};
+    color: {FG_PRIMARY};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 9pt;
 }}
-QLineEdit:focus, QComboBox:focus {{
-    border-color: {BLUE_ACCENT};
+QLineEdit:focus {{
+    border-color: {ACCENT};
 }}
-QComboBox::drop-down {{ border: none; }}
+QLineEdit::placeholder {{
+    color: {FG_MUTED};
+}}
+QComboBox::drop-down {{
+    border: none;
+    padding-right: 8px;
+}}
+QComboBox::down-arrow {{
+    width: 10px;
+    height: 10px;
+}}
+QComboBox:focus {{
+    border-color: {ACCENT};
+}}
 QComboBox QAbstractItemView {{
-    background: {BG_INPUT};
-    color: {FG_MAIN};
-    border: 1px solid {BLUE_BORDER};
-    selection-background-color: #1a3a4a;
-    selection-color: {BLUE_ACCENT};
+    background: {ACCENT_DARK};
+    color: {FG_PRIMARY};
+    border: 1px solid {BORDER};
+    selection-background-color: {BTN_BG};
+    selection-color: {ACCENT};
+    outline: none;
 }}
 QPushButton {{
-    background: {BG_INPUT};
-    color: {FG_MAIN};
-    border: 1px solid {BLUE_BORDER};
-    border-radius: 4px;
-    padding: 5px 12px;
+    background: {BTN_BG};
+    color: {BTN_FG};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 9pt;
 }}
 QPushButton:hover {{
-    background: #1a3a4a;
-    color: {BLUE_ACCENT};
-    border-color: {BLUE_ACCENT};
+    background: #1C3A7A;
+    color: {ACCENT};
+    border-color: {ACCENT};
+}}
+QPushButton:pressed {{
+    background: {ACCENT_DARK};
 }}
 QPushButton#btn_save {{
-    background: #0e2a3a;
-    color: {BLUE_ACCENT};
-    border: 1px solid {BLUE_ACCENT};
+    background: {ACCENT};
+    color: #FFFFFF;
+    border: 1px solid {ACCENT};
     font-weight: bold;
+    padding: 7px 22px;
 }}
 QPushButton#btn_save:hover {{
-    background: #1a3a4a;
+    background: #4A74E8;
+    border-color: #4A74E8;
 }}
 QPushButton#btn_del {{
-    background: #1a1010;
-    border-color: #3a2020;
-    color: #cc5555;
+    background: #2A1525;
+    color: {RED_SOFT};
+    border: 1px solid #4A2040;
 }}
 QPushButton#btn_del:hover {{
-    background: #2a1a1a;
-    color: #ff6666;
-    border-color: #aa3333;
+    background: #3A1A30;
+    color: #FF80AB;
+    border-color: {RED_SOFT};
 }}
 QPushButton#btn_del:disabled {{
-    background: {BG_MAIN};
-    color: #333333;
-    border-color: #1a2a3a;
+    background: {BG_SURFACE};
+    color: {FG_MUTED};
+    border-color: {BORDER};
 }}
 QTableWidget {{
     background: {BG_TABLE};
-    color: {FG_MAIN};
-    border: 1px solid {BLUE_BORDER};
-    gridline-color: #1a2a3a;
+    color: {FG_PRIMARY};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    gridline-color: {BORDER};
+    font-size: 9pt;
 }}
 QTableWidget::item {{
     background: {BG_TABLE};
-    color: {FG_MAIN};
-    padding: 2px 4px;
+    color: {FG_PRIMARY};
+    padding: 3px 6px;
+    border: none;
 }}
 QTableWidget::item:selected {{
-    background: #1a3a4a;
-    color: {BLUE_ACCENT};
+    background: {BTN_BG};
+    color: {ACCENT};
+}}
+QTableWidget::item:hover {{
+    background: #1F2A45;
 }}
 QHeaderView::section {{
-    background: {BG_INPUT};
-    color: {BLUE_ACCENT};
+    background: {BG_SURFACE};
+    color: {ACCENT};
     border: none;
-    border-right: 1px solid {BLUE_BORDER};
-    border-bottom: 1px solid {BLUE_BORDER};
-    padding: 4px;
+    border-right: 1px solid {BORDER};
+    border-bottom: 1px solid {BORDER};
+    padding: 5px 6px;
     font-weight: bold;
+    font-size: 9pt;
 }}
 QTableCornerButton::section {{
-    background: {BG_INPUT};
+    background: {BG_SURFACE};
     border: none;
 }}
 QScrollBar:vertical {{
     background: {BG_MAIN};
-    width: 8px;
+    width: 6px;
     border: none;
+    border-radius: 3px;
 }}
 QScrollBar::handle:vertical {{
-    background: #1e3a4a;
-    border-radius: 4px;
-    min-height: 20px;
+    background: {BORDER};
+    border-radius: 3px;
+    min-height: 24px;
+}}
+QScrollBar::handle:vertical:hover {{
+    background: {FG_SECONDARY};
 }}
 QScrollBar::add-line:vertical,
 QScrollBar::sub-line:vertical {{ height: 0; }}
 """
 
-# ── 시장 목록 정의 ────────────────────────────────────────────────────────────
+# ── 시장 목록 ─────────────────────────────────────────────────────────────────
 MARKET_OPTIONS = [
     ("한국 주식  (KR)",    "KR"),
     ("한국 ETF  (KR_ETF)", "KR_ETF"),
     ("미국  (US)",         "US"),
 ]
 
-# 시장 코드 → 표시 이름
 MARKET_LABEL = {
     "KR"     : "KR",
     "KR_ETF" : "ETF",
@@ -146,7 +183,7 @@ MARKET_LABEL = {
 
 class DraggableTable(QTableWidget):
     """드래그로 행 순서를 변경하는 테이블"""
-    row_moved = pyqtSignal(int, int)   # from_row, to_row
+    row_moved = pyqtSignal(int, int)
 
     def __init__(self, rows: int, cols: int):
         super().__init__(rows, cols)
@@ -165,7 +202,7 @@ class DraggableTable(QTableWidget):
         if self._drag_src is not None and dst is not None and self._drag_src != dst:
             self.row_moved.emit(self._drag_src, dst)
         self._drag_src = None
-        e.ignore()   # 직접 처리하므로 Qt 기본 동작 무시
+        e.ignore()
 
 
 class SearchThread(QThread):
@@ -193,12 +230,12 @@ class StockDialog(QDialog):
         super().__init__(parent)
         self.data_dir       = data_dir
         self.stocks         = [s.copy() for s in stocks]
-        self._sel_result    = None   # 검색에서 선택된 종목
+        self._sel_result    = None
         self._search_thread = None
         self._old_threads   = []
 
         self.setWindowTitle("종목 설정")
-        self.setMinimumSize(660, 560)
+        self.setMinimumSize(680, 580)
         self.setStyleSheet(STYLE)
         self._build_ui()
         self._refresh_table()
@@ -208,19 +245,19 @@ class StockDialog(QDialog):
 
     def _build_ui(self):
         main = QVBoxLayout()
-        main.setContentsMargins(16, 16, 16, 16)
-        main.setSpacing(10)
+        main.setContentsMargins(18, 18, 18, 18)
+        main.setSpacing(12)
 
-        # ── 종목 검색 영역 ────────────────────────────────────────────────
-        main.addWidget(self._section("▸ 종목 / ETF 검색 및 추가"))
+        # ── 섹션: 검색 ───────────────────────────────────────────────────────
+        main.addWidget(self._section_label("종목 · ETF 검색 및 추가"))
 
         row_search = QHBoxLayout()
+        row_search.setSpacing(8)
 
-        # 시장 선택 콤보
         self.cmb_market = QComboBox()
         for label, _ in MARKET_OPTIONS:
             self.cmb_market.addItem(label)
-        self.cmb_market.setFixedWidth(160)
+        self.cmb_market.setFixedWidth(168)
         self.cmb_market.setToolTip(
             "한국 주식 : 코스피·코스닥\n"
             "한국 ETF  : KODEX·TIGER·KBSTAR 등 KR ETF 1140종\n"
@@ -229,12 +266,12 @@ class StockDialog(QDialog):
 
         self.edit_query = QLineEdit()
         self.edit_query.setPlaceholderText(
-            "코드 또는 종목명  예) 005930  삼성전자  069500  KODEX 200  AAPL  SPY"
+            "코드 또는 종목명   예) 005930  삼성전자  069500  AAPL  SPY"
         )
         self.edit_query.returnPressed.connect(self._search)
 
         btn_search = QPushButton("조회")
-        btn_search.setFixedWidth(64)
+        btn_search.setFixedWidth(68)
         btn_search.clicked.connect(self._search)
 
         row_search.addWidget(self.cmb_market)
@@ -242,7 +279,7 @@ class StockDialog(QDialog):
         row_search.addWidget(btn_search)
         main.addLayout(row_search)
 
-        # ── 검색 결과 테이블 ──────────────────────────────────────────────
+        # ── 검색 결과 테이블 ──────────────────────────────────────────────────
         self.tbl_search = QTableWidget(0, 3)
         self.tbl_search.setHorizontalHeaderLabels(["코드", "종목명 / ETF명", "현재가"])
         self.tbl_search.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
@@ -250,31 +287,40 @@ class StockDialog(QDialog):
         self.tbl_search.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeToContents)
         self.tbl_search.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.tbl_search.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.tbl_search.setFixedHeight(120)
+        self.tbl_search.setFixedHeight(130)
         self.tbl_search.itemClicked.connect(self._on_search_clicked)
         main.addWidget(self.tbl_search)
 
-        # ── 매수 정보 입력 ────────────────────────────────────────────────
+        # ── 매수 정보 입력 ────────────────────────────────────────────────────
         row_input = QHBoxLayout()
+        row_input.setSpacing(8)
+
+        lbl_buy = QLabel("매수단가")
+        lbl_buy.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent; font-size: 9pt;")
         self.edit_buy = QLineEdit()
         self.edit_buy.setPlaceholderText("매수단가")
         self.edit_buy.returnPressed.connect(self._add_stock)
+
+        lbl_qty = QLabel("수량")
+        lbl_qty.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent; font-size: 9pt;")
         self.edit_qty = QLineEdit()
         self.edit_qty.setPlaceholderText("보유수량")
         self.edit_qty.returnPressed.connect(self._add_stock)
+
         btn_add = QPushButton("추가")
-        btn_add.setFixedWidth(64)
+        btn_add.setFixedWidth(68)
         btn_add.clicked.connect(self._add_stock)
 
-        row_input.addWidget(QLabel("매수단가"))
+        row_input.addWidget(lbl_buy)
         row_input.addWidget(self.edit_buy)
-        row_input.addWidget(QLabel("수량"))
+        row_input.addSpacing(6)
+        row_input.addWidget(lbl_qty)
         row_input.addWidget(self.edit_qty)
         row_input.addWidget(btn_add)
         main.addLayout(row_input)
 
-        # ── 저장된 종목 테이블 ────────────────────────────────────────────
-        main.addWidget(self._section("▸ 저장된 종목  (행 드래그로 순서 변경 가능)"))
+        # ── 섹션: 저장된 종목 ─────────────────────────────────────────────────
+        main.addWidget(self._section_label("저장된 종목  —  행 드래그로 순서 변경"))
 
         self.tbl_stocks = DraggableTable(0, 5)
         self.tbl_stocks.setHorizontalHeaderLabels(["시장", "코드", "종목명", "매수단가", "수량"])
@@ -288,8 +334,9 @@ class StockDialog(QDialog):
         self.tbl_stocks.row_moved.connect(self._on_row_moved)
         main.addWidget(self.tbl_stocks)
 
-        # ── 하단 버튼 ─────────────────────────────────────────────────────
+        # ── 하단 버튼 ─────────────────────────────────────────────────────────
         row_btn = QHBoxLayout()
+        row_btn.setSpacing(8)
         self.btn_del = QPushButton("선택 삭제")
         self.btn_del.setObjectName("btn_del")
         self.btn_del.clicked.connect(self._delete_selected)
@@ -303,27 +350,33 @@ class StockDialog(QDialog):
 
         row_btn.addWidget(self.btn_del)
         row_btn.addStretch()
-        row_btn.addWidget(btn_save)
         row_btn.addWidget(btn_close)
+        row_btn.addWidget(btn_save)
         main.addLayout(row_btn)
 
         self.setLayout(main)
         self._update_del_btn()
 
-    def _section(self, text: str) -> QLabel:
-        lbl = QLabel(text)
+    def _section_label(self, text: str) -> QLabel:
+        lbl = QLabel(f"  {text}")
         lbl.setFont(QFont("Malgun Gothic", 9, QFont.Bold))
-        lbl.setStyleSheet(f"color: {BLUE_ACCENT}; background: transparent;")
+        lbl.setFixedHeight(28)
+        lbl.setStyleSheet(
+            f"color: {FG_PRIMARY};"
+            f"background: {BG_SURFACE};"
+            f"border-left: 3px solid {ACCENT};"
+            f"border-radius: 0px;"
+            f"padding-left: 8px;"
+        )
         return lbl
 
     def _get_selected_market(self) -> str:
-        """콤보박스 현재 선택 → market 코드 반환"""
         idx = self.cmb_market.currentIndex()
         if 0 <= idx < len(MARKET_OPTIONS):
             return MARKET_OPTIONS[idx][1]
         return "KR"
 
-    # ── 검색 ─────────────────────────────────────────────────────────────────
+    # ── 검색 ──────────────────────────────────────────────────────────────────
 
     def _search(self):
         query = self.edit_query.text().strip()
@@ -332,17 +385,15 @@ class StockDialog(QDialog):
         market = self._get_selected_market()
         logger.info(f"StockDialog search: market={market}, query={query!r}")
 
-        # 이전 스레드 보관
         if self._search_thread and self._search_thread.isRunning():
             self._old_threads.append(self._search_thread)
 
-        # "조회 중..." 표시
         self.tbl_search.clearContents()
         self.tbl_search.setRowCount(1)
         self.tbl_search.setSpan(0, 0, 1, 3)
-        it = QTableWidgetItem("조회 중...")
-        it.setTextAlignment(Qt.AlignCenter)
-        it.setForeground(QColor(FG_DIM))
+        it = QTableWidgetItem("  조회 중...")
+        it.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+        it.setForeground(QColor(FG_MUTED))
         it.setBackground(QColor(BG_TABLE))
         self.tbl_search.setItem(0, 0, it)
 
@@ -355,7 +406,7 @@ class StockDialog(QDialog):
 
     def _on_search_result(self, results: list):
         if self.sender() is not self._search_thread:
-            return   # 이전 스레드 결과는 무시
+            return
 
         self.tbl_search.setSpan(0, 0, 1, 1)
         self.tbl_search.clearContents()
@@ -364,10 +415,10 @@ class StockDialog(QDialog):
             self.tbl_search.setRowCount(1)
             self.tbl_search.setSpan(0, 0, 1, 3)
             it = QTableWidgetItem(
-                "검색 결과가 없습니다.  코드·종목명을 다시 확인하거나 시장을 변경해보세요."
+                "  검색 결과가 없습니다.  코드·종목명을 다시 확인하거나 시장을 변경해보세요."
             )
-            it.setTextAlignment(Qt.AlignCenter)
-            it.setForeground(QColor(FG_DIM))
+            it.setTextAlignment(Qt.AlignVCenter | Qt.AlignLeft)
+            it.setForeground(QColor(FG_MUTED))
             it.setBackground(QColor(BG_TABLE))
             self.tbl_search.setItem(0, 0, it)
             self._sel_result = None
@@ -375,20 +426,19 @@ class StockDialog(QDialog):
 
         self.tbl_search.setRowCount(len(results))
         for i, r in enumerate(results):
-            market = r["market"]
-            price  = r["price"]
-            # 원화는 정수, 달러는 소수 2자리
+            market    = r["market"]
+            price     = r["price"]
             price_str = f"{price:,.2f}" if market == "US" else f"{price:,.0f}"
             vals = [r["code"], r["name"], price_str]
+            # ETF는 보라, 일반 주식은 기본 텍스트
+            fg = ETF_COLOR if market == "KR_ETF" else FG_PRIMARY
             for col, val in enumerate(vals):
                 it = QTableWidgetItem(val)
                 it.setBackground(QColor(BG_TABLE))
-                # ETF 이름은 파란색으로 구분
-                fg = BLUE_ACCENT if market == "KR_ETF" else FG_MAIN
                 it.setForeground(QColor(fg))
+                it.setFont(QFont("Malgun Gothic", 9))
                 self.tbl_search.setItem(i, col, it)
 
-        # 결과 1건이면 자동 선택
         if len(results) == 1:
             self._sel_result = results[0]
             self.tbl_search.selectRow(0)
@@ -403,7 +453,7 @@ class StockDialog(QDialog):
     def _on_search_clicked(self, item):
         row = item.row()
         if self.tbl_search.columnSpan(row, 0) > 1:
-            return   # "조회 중" / "없음" 행
+            return
         code_it  = self.tbl_search.item(row, 0)
         name_it  = self.tbl_search.item(row, 1)
         price_it = self.tbl_search.item(row, 2)
@@ -494,7 +544,7 @@ class StockDialog(QDialog):
         for i, s in enumerate(self.stocks):
             market = s.get("market", "KR")
             vals = [
-                MARKET_LABEL.get(market, market),   # 시장 표시명
+                MARKET_LABEL.get(market, market),
                 s.get("code", ""),
                 s.get("name", ""),
                 f"{s.get('buy_price', 0):,.0f}",
@@ -502,14 +552,12 @@ class StockDialog(QDialog):
             ]
             for col, val in enumerate(vals):
                 it = QTableWidgetItem(val)
+                it.setFont(QFont("Malgun Gothic", 9))
                 it.setBackground(QColor(BG_TABLE))
-                # ETF 행은 파랑으로 강조
-                if market == "KR_ETF":
-                    fg = BLUE_ACCENT if col == 0 else FG_MAIN
+                if market == "KR_ETF" and col == 0:
+                    it.setForeground(QColor(ETF_COLOR))
                 else:
-                    fg = FG_MAIN
-                it.setForeground(QColor(fg))
-                # 종목명(2), 매수단가(3), 수량(4) 편집 가능
+                    it.setForeground(QColor(FG_PRIMARY))
                 if col in (2, 3, 4):
                     it.setFlags(it.flags() | Qt.ItemIsEditable)
                 else:
@@ -520,12 +568,11 @@ class StockDialog(QDialog):
         if item.column() in (2, 3, 4):
             self.tbl_stocks.editItem(item)
 
-    # ── 저장 ─────────────────────────────────────────────────────────────────
+    # ── 저장 ──────────────────────────────────────────────────────────────────
 
     def _save(self):
         """저장 — 강제 종료 방지를 위해 완전히 try/except 로 감쌈"""
         try:
-            # 테이블 편집 내용을 self.stocks 에 반영
             for i in range(self.tbl_stocks.rowCount()):
                 if i >= len(self.stocks):
                     break
@@ -549,7 +596,6 @@ class StockDialog(QDialog):
             save_stocks(self.data_dir, self.stocks)
             logger.info(f"stocks saved: {len(self.stocks)} items")
 
-            # signal 먼저 emit → 그 다음 닫기
             self.stocks_updated.emit([s.copy() for s in self.stocks])
             self.accept()
 

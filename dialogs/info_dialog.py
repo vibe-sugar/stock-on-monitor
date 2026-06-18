@@ -1,37 +1,61 @@
-"""프로그램 정보 다이얼로그 — 블루 포인트 테마"""
+"""프로그램 정보 다이얼로그 — 통일 디자인 시스템"""
 
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
+)
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QFont, QDesktopServices
 
 from core.constants import APP_NAME, APP_VERSION, APP_AUTHOR, APP_WEBSITE, APP_GITHUB
 
-BLUE_ACCENT = "#2841E8"
-BLUE_BORDER = "#1e3a4a"
-BG_MAIN     = "#0f1a22"
-BG_INPUT    = "#162030"
-FG_MAIN     = "#b0b0b0"
-FG_DIM      = "#666666"
+# ── 디자인 토큰 ────────────────────────────────────────────────────────────────
+ACCENT       = "#5D87F6"
+ACCENT_DARK  = "#111726"
+BTN_BG       = "#132859"
+BTN_FG       = "#577CF7"
+BG_MAIN      = "#1A1F2E"
+BG_SURFACE   = "#222840"
+BORDER       = "#2D3A5C"
+FG_PRIMARY   = "#D8DEF0"
+FG_SECONDARY = "#7A8AB0"
+FG_MUTED     = "#4A5578"
 
 STYLE = f"""
 QDialog {{
     background: {BG_MAIN};
 }}
 QLabel {{
-    color: {FG_MAIN};
+    color: {FG_PRIMARY};
     background: transparent;
 }}
+QFrame#divider {{
+    background: {BORDER};
+}}
 QPushButton {{
-    background: {BG_INPUT};
-    color: {FG_MAIN};
-    border: 1px solid {BLUE_BORDER};
-    border-radius: 4px;
-    padding: 5px 14px;
+    background: {BTN_BG};
+    color: {BTN_FG};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    padding: 6px 16px;
+    font-size: 9pt;
 }}
 QPushButton:hover {{
-    background: #1a3a4a;
-    color: {BLUE_ACCENT};
-    border-color: {BLUE_ACCENT};
+    background: #1C3A7A;
+    color: {ACCENT};
+    border-color: {ACCENT};
+}}
+QPushButton:pressed {{
+    background: {ACCENT_DARK};
+}}
+QPushButton#btn_close {{
+    background: {BG_SURFACE};
+    color: {FG_SECONDARY};
+    border: 1px solid {BORDER};
+    padding: 5px 30px;
+}}
+QPushButton#btn_close:hover {{
+    color: {FG_PRIMARY};
+    border-color: {FG_SECONDARY};
 }}
 """
 
@@ -40,47 +64,75 @@ class InfoDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("프로그램 정보")
-        self.setFixedSize(320, 220)
+        self.setFixedSize(340, 240)
         self.setStyleSheet(STYLE)
         self._build_ui()
 
     def _build_ui(self):
         layout = QVBoxLayout()
-        layout.setSpacing(8)
-        layout.setContentsMargins(30, 24, 30, 20)
+        layout.setSpacing(0)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        # 앱 이름 (파란 포인트)
-        title = QLabel(f"◆  {APP_NAME}")
-        title.setFont(QFont("Malgun Gothic", 15, QFont.Bold))
-        title.setStyleSheet(f"color: {BLUE_ACCENT};")
+        # ── 상단 헤더 영역 ────────────────────────────────────────────────────
+        header = QWidget()
+        header.setStyleSheet(f"background: {BG_SURFACE}; border-radius: 0px;")
+        h_layout = QVBoxLayout()
+        h_layout.setContentsMargins(30, 22, 30, 18)
+        h_layout.setSpacing(6)
+
+        title = QLabel(APP_NAME)
+        title.setFont(QFont("Malgun Gothic", 16, QFont.Bold))
+        title.setStyleSheet(f"color: {ACCENT}; background: transparent;")
         title.setAlignment(Qt.AlignCenter)
-        layout.addWidget(title)
+        h_layout.addWidget(title)
 
-        layout.addSpacing(4)
+        ver_lbl = QLabel(f"Version  {APP_VERSION}")
+        ver_lbl.setFont(QFont("Malgun Gothic", 9))
+        ver_lbl.setStyleSheet(f"color: {FG_MUTED}; background: transparent;")
+        ver_lbl.setAlignment(Qt.AlignCenter)
+        h_layout.addWidget(ver_lbl)
 
-        for text in [f"Version  {APP_VERSION}", APP_AUTHOR]:
-            lbl = QLabel(text)
-            lbl.setFont(QFont("Malgun Gothic", 9))
-            lbl.setStyleSheet(f"color: {FG_DIM};")
-            lbl.setAlignment(Qt.AlignCenter)
-            layout.addWidget(lbl)
+        header.setLayout(h_layout)
+        layout.addWidget(header)
 
-        layout.addSpacing(10)
+        # ── 구분선 ────────────────────────────────────────────────────────────
+        div = QFrame()
+        div.setObjectName("divider")
+        div.setFixedHeight(1)
+        layout.addWidget(div)
 
-        # 링크 버튼
+        # ── 하단 콘텐츠 ───────────────────────────────────────────────────────
+        body = QWidget()
+        body.setStyleSheet(f"background: {BG_MAIN};")
+        b_layout = QVBoxLayout()
+        b_layout.setContentsMargins(24, 16, 24, 16)
+        b_layout.setSpacing(10)
+
+        author_lbl = QLabel(APP_AUTHOR)
+        author_lbl.setFont(QFont("Malgun Gothic", 9))
+        author_lbl.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent;")
+        author_lbl.setAlignment(Qt.AlignCenter)
+        b_layout.addWidget(author_lbl)
+
+        # 링크 버튼 행
         row = QHBoxLayout()
-        btn_web = QPushButton("🌐 웹사이트")
-        btn_git = QPushButton("🐙 GitHub")
+        row.setSpacing(8)
+        btn_web = QPushButton("🌐  웹사이트")
+        btn_git = QPushButton("🐙  GitHub")
         btn_web.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(APP_WEBSITE)))
         btn_git.clicked.connect(lambda: QDesktopServices.openUrl(QUrl(APP_GITHUB)))
         row.addWidget(btn_web)
         row.addWidget(btn_git)
-        layout.addLayout(row)
+        b_layout.addLayout(row)
 
-        layout.addStretch()
+        b_layout.addStretch()
 
         btn_close = QPushButton("닫기")
+        btn_close.setObjectName("btn_close")
         btn_close.clicked.connect(self.accept)
-        layout.addWidget(btn_close, alignment=Qt.AlignCenter)
+        b_layout.addWidget(btn_close, alignment=Qt.AlignCenter)
+
+        body.setLayout(b_layout)
+        layout.addWidget(body)
 
         self.setLayout(layout)
