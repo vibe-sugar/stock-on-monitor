@@ -173,17 +173,64 @@ class ColorButton(QPushButton):
         return self._color
 
     def _pick(self):
-        # QColorDialog — 그림판 수준의 풀 HSV 컬러 휠/스펙트럼 선택
+        # QColorDialog — DontUseNativeDialog 로 네이티브 OS 다이얼로그 비활성화
+        # → stylesheet 를 직접 적용해 배경색 통일 (검은색 다크 테마)
         initial = QColor(self._color)
-        color = QColorDialog.getColor(
-            initial, self,
-            "색상 선택",
-            QColorDialog.ShowAlphaChannel,
+        dlg = QColorDialog(initial, self)
+        dlg.setWindowTitle("색상 선택")
+        dlg.setOptions(
+            QColorDialog.DontUseNativeDialog |
+            QColorDialog.ShowAlphaChannel
         )
-        if color.isValid():
-            hex_color = color.name()  # '#rrggbb'
-            self.set_color(hex_color)
-            self.color_changed.emit(hex_color)
+        # 다크 테마 stylesheet 강제 적용
+        dlg.setStyleSheet(f"""
+            QDialog, QWidget {{
+                background: {BG_MAIN};
+                color: {FG_PRIMARY};
+            }}
+            QLabel {{ color: {FG_PRIMARY}; background: transparent; }}
+            QLineEdit {{
+                background: {BG_INPUT};
+                color: {FG_PRIMARY};
+                border: 1px solid {BORDER};
+                border-radius: 3px;
+                padding: 2px 4px;
+            }}
+            QLineEdit:focus {{ border-color: {ACCENT}; }}
+            QPushButton {{
+                background: {BTN_BG};
+                color: {BTN_FG};
+                border: 1px solid {BORDER};
+                border-radius: 4px;
+                padding: 4px 12px;
+                min-width: 60px;
+            }}
+            QPushButton:hover {{
+                background: #263A6A;
+                color: {ACCENT};
+                border-color: {ACCENT};
+            }}
+            QPushButton:pressed {{ background: #141E38; }}
+            QSpinBox {{
+                background: {BG_INPUT};
+                color: {FG_PRIMARY};
+                border: 1px solid {BORDER};
+                border-radius: 3px;
+                padding: 2px 4px;
+            }}
+            QSpinBox::up-button, QSpinBox::down-button {{
+                background: {BG_INPUT}; border: none; width: 14px;
+            }}
+            QFrame#qt_colorpicker_separator {{
+                background: {BORDER};
+            }}
+        """)
+        if dlg.exec_() == QColorDialog.Accepted:
+            color = dlg.currentColor()
+            if color.isValid():
+                hex_color = color.name()
+                self.set_color(hex_color)
+                self.color_changed.emit(hex_color)
 
 
 # ColorPickerDialog 는 더 이상 사용하지 않음.
