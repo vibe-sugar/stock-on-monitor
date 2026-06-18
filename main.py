@@ -68,8 +68,20 @@ def main():
         sys.exit(1)
 
     # ── 광고 팝업 (프로그램 시작 시 1회만) ──────────────────────────────────
+    # PyQtWebEngine 미설치 시 자동 pip install 후 재시도
     _ad_popup = None
     try:
+        try:
+            from PyQt5.QtWebEngineWidgets import QWebEngineView  # noqa: F401
+        except ImportError:
+            logger.info("PyQtWebEngine not found — installing...")
+            import subprocess
+            subprocess.check_call(
+                [sys.executable, "-m", "pip", "install", "PyQtWebEngine"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+            logger.info("PyQtWebEngine installed")
         from ad_popup import AdPopup
         _ad_popup = AdPopup()
         _ad_popup.show()

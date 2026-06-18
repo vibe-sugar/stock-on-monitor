@@ -22,7 +22,15 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QSizePolicy, QApplication, QFrame,
 )
-from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+try:
+    from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings
+except ImportError as _web_err:
+    import sys, subprocess
+    subprocess.check_call(
+        [sys.executable, "-m", "pip", "install", "PyQtWebEngine"],
+        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+    )
+    from PyQt5.QtWebEngineWidgets import QWebEngineView, QWebEngineSettings  # type: ignore
 from PyQt5.QtCore import Qt, QUrl, QTimer
 from PyQt5.QtGui import QFont, QFontMetrics
 
