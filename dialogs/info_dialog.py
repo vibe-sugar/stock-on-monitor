@@ -1,7 +1,7 @@
-"""프로그램 정보 다이얼로그 — 통일 디자인 시스템"""
+"""프로그램 정보 다이얼로그"""
 
 from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame,
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, QWidget,
 )
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QFont, QDesktopServices
@@ -9,28 +9,21 @@ from PyQt5.QtGui import QFont, QDesktopServices
 from core.constants import APP_NAME, APP_VERSION, APP_AUTHOR, APP_WEBSITE, APP_GITHUB
 
 # ── 디자인 토큰 ────────────────────────────────────────────────────────────────
-ACCENT       = "#5D87F6"
-ACCENT_DARK  = "#111726"
-BTN_BG       = "#132859"
-BTN_FG       = "#577CF7"
-BG_MAIN      = "#1A1F2E"
-BG_SURFACE   = "#222840"
-BORDER       = "#2D3A5C"
-FG_PRIMARY   = "#D8DEF0"
-FG_SECONDARY = "#7A8AB0"
-FG_MUTED     = "#4A5578"
+ACCENT       = "#5D87F6"   # 파랑 포인트
+BG_MAIN      = "#1A1B1C"   # 메인 배경
+BG_SURFACE   = "#242526"   # 카드/헤더 배경
+BORDER       = "#3A3B3C"   # 테두리
+BTN_BG       = "#1E2A4A"   # 버튼 배경
+BTN_FG       = "#7DA4F8"   # 버튼 글씨
+FG_PRIMARY   = "#E0E0E0"   # 주요 텍스트
+FG_SECONDARY = "#909090"   # 보조 텍스트
+FG_MUTED     = "#555555"   # 희미한 텍스트
 
 STYLE = f"""
-QDialog {{
-    background: {BG_MAIN};
-}}
-QLabel {{
-    color: {FG_PRIMARY};
-    background: transparent;
-}}
-QFrame#divider {{
-    background: {BORDER};
-}}
+QDialog  {{ background: {BG_MAIN}; }}
+QWidget  {{ background: transparent; }}
+QLabel   {{ color: {FG_PRIMARY}; background: transparent; }}
+QFrame#divider {{ background: {BORDER}; border: none; }}
 QPushButton {{
     background: {BTN_BG};
     color: {BTN_FG};
@@ -40,12 +33,12 @@ QPushButton {{
     font-size: 9pt;
 }}
 QPushButton:hover {{
-    background: #1C3A7A;
+    background: #263A6A;
     color: {ACCENT};
     border-color: {ACCENT};
 }}
 QPushButton:pressed {{
-    background: {ACCENT_DARK};
+    background: #141E38;
 }}
 QPushButton#btn_close {{
     background: {BG_SURFACE};
@@ -56,6 +49,7 @@ QPushButton#btn_close {{
 QPushButton#btn_close:hover {{
     color: {FG_PRIMARY};
     border-color: {FG_SECONDARY};
+    background: #2E2F30;
 }}
 """
 
@@ -73,7 +67,7 @@ class InfoDialog(QDialog):
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        # ── 상단 헤더 영역 ────────────────────────────────────────────────────
+        # ── 상단 헤더 ─────────────────────────────────────────────────────────
         header = QWidget()
         header.setStyleSheet(f"background: {BG_SURFACE}; border-radius: 0px;")
         h_layout = QVBoxLayout()
@@ -101,7 +95,7 @@ class InfoDialog(QDialog):
         div.setFixedHeight(1)
         layout.addWidget(div)
 
-        # ── 하단 콘텐츠 ───────────────────────────────────────────────────────
+        # ── 본문 ──────────────────────────────────────────────────────────────
         body = QWidget()
         body.setStyleSheet(f"background: {BG_MAIN};")
         b_layout = QVBoxLayout()
@@ -114,7 +108,6 @@ class InfoDialog(QDialog):
         author_lbl.setAlignment(Qt.AlignCenter)
         b_layout.addWidget(author_lbl)
 
-        # 링크 버튼 행
         row = QHBoxLayout()
         row.setSpacing(8)
         btn_web = QPushButton("🌐  웹사이트")

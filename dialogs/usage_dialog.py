@@ -1,4 +1,4 @@
-"""사용법 다이얼로그 — 통일 디자인 시스템"""
+"""사용법 다이얼로그"""
 
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QFrame, QWidget,
@@ -10,43 +10,35 @@ from core.constants import APP_WEBSITE
 
 # ── 디자인 토큰 ────────────────────────────────────────────────────────────────
 ACCENT       = "#5D87F6"
-ACCENT_DARK  = "#111726"
-BTN_BG       = "#132859"
-BTN_FG       = "#577CF7"
-BG_MAIN      = "#1A1F2E"
-BG_SURFACE   = "#222840"
-BORDER       = "#2D3A5C"
-FG_PRIMARY   = "#D8DEF0"
-FG_SECONDARY = "#7A8AB0"
-FG_MUTED     = "#4A5578"
+BG_MAIN      = "#1A1B1C"
+BG_SURFACE   = "#242526"
+BG_ROW       = "#2C2D2E"
+BORDER       = "#3A3B3C"
+BTN_BG       = "#1E2A4A"
+BTN_FG       = "#7DA4F8"
+FG_PRIMARY   = "#E0E0E0"
+FG_SECONDARY = "#909090"
+FG_MUTED     = "#555555"
 
 STYLE = f"""
-QDialog {{
-    background: {BG_MAIN};
-}}
-QLabel {{
-    color: {FG_PRIMARY};
-    background: transparent;
-}}
-QFrame#divider {{
-    background: {BORDER};
-}}
+QDialog  {{ background: {BG_MAIN}; }}
+QWidget  {{ background: transparent; }}
+QLabel   {{ color: {FG_PRIMARY}; background: transparent; }}
+QFrame#divider {{ background: {BORDER}; border: none; }}
 QPushButton {{
     background: {BTN_BG};
     color: {BTN_FG};
     border: 1px solid {BORDER};
     border-radius: 6px;
-    padding: 6px 16px;
+    padding: 6px 14px;
     font-size: 9pt;
 }}
 QPushButton:hover {{
-    background: #1C3A7A;
+    background: #263A6A;
     color: {ACCENT};
     border-color: {ACCENT};
 }}
-QPushButton:pressed {{
-    background: {ACCENT_DARK};
-}}
+QPushButton:pressed {{ background: #141E38; }}
 QPushButton#btn_close {{
     background: {BG_SURFACE};
     color: {FG_SECONDARY};
@@ -55,10 +47,10 @@ QPushButton#btn_close {{
 QPushButton#btn_close:hover {{
     color: {FG_PRIMARY};
     border-color: {FG_SECONDARY};
+    background: #2E2F30;
 }}
 """
 
-# 각 항목: (아이콘, 제목, 설명)
 USAGE_ITEMS = [
     ("🖱",  "우클릭",      "메뉴 열기"),
     ("✥",   "클릭+드래그", "위치 이동"),
@@ -81,14 +73,14 @@ class UsageDialog(QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # ── 헤더 ─────────────────────────────────────────────────────────────
+        # 헤더
         header = QWidget()
         header.setStyleSheet(f"background: {BG_SURFACE};")
         h_lay = QVBoxLayout()
-        h_lay.setContentsMargins(24, 16, 24, 14)
+        h_lay.setContentsMargins(24, 14, 24, 12)
         h_lay.setSpacing(0)
         title = QLabel("사용법")
-        title.setFont(QFont("Malgun Gothic", 13, QFont.Bold))
+        title.setFont(QFont("Malgun Gothic", 12, QFont.Bold))
         title.setStyleSheet(f"color: {ACCENT}; background: transparent;")
         title.setAlignment(Qt.AlignCenter)
         h_lay.addWidget(title)
@@ -100,26 +92,23 @@ class UsageDialog(QDialog):
         div.setFixedHeight(1)
         layout.addWidget(div)
 
-        # ── 본문 ─────────────────────────────────────────────────────────────
+        # 본문
         body = QWidget()
         body.setStyleSheet(f"background: {BG_MAIN};")
         b_lay = QVBoxLayout()
-        b_lay.setContentsMargins(20, 16, 20, 16)
-        b_lay.setSpacing(6)
+        b_lay.setContentsMargins(18, 14, 18, 14)
+        b_lay.setSpacing(5)
 
         for icon, action, desc in USAGE_ITEMS:
             row_w = QWidget()
-            row_w.setStyleSheet(
-                f"background: {BG_SURFACE};"
-                f"border-radius: 6px;"
-            )
+            row_w.setStyleSheet(f"background: {BG_ROW}; border-radius: 5px;")
             row = QHBoxLayout()
             row.setContentsMargins(12, 7, 12, 7)
             row.setSpacing(10)
 
             lbl_icon = QLabel(icon)
             lbl_icon.setFixedWidth(22)
-            lbl_icon.setFont(QFont("Segoe UI Emoji", 11))
+            lbl_icon.setFont(QFont("Segoe UI Emoji", 10))
             lbl_icon.setStyleSheet(f"color: {ACCENT}; background: transparent;")
             lbl_icon.setAlignment(Qt.AlignCenter)
 
@@ -141,7 +130,6 @@ class UsageDialog(QDialog):
 
         b_lay.addStretch()
 
-        # 버튼 행
         btn_row = QHBoxLayout()
         btn_row.setSpacing(8)
         btn_web = QPushButton("🌐  웹사이트에서 더 보기")
@@ -155,5 +143,4 @@ class UsageDialog(QDialog):
 
         body.setLayout(b_lay)
         layout.addWidget(body)
-
         self.setLayout(layout)

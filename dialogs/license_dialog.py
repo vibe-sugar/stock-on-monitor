@@ -1,45 +1,42 @@
-"""오픈소스 라이선스 다이얼로그 — 통일 디자인 시스템"""
+"""오픈소스 라이선스 다이얼로그"""
 
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QScrollArea, QWidget,
+    QScrollArea, QWidget, QFrame,
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QFont, QDesktopServices
-from PyQt5.QtCore import QUrl
 
 # ── 디자인 토큰 ────────────────────────────────────────────────────────────────
 ACCENT       = "#5D87F6"
-ACCENT_DARK  = "#111726"
-BTN_BG       = "#132859"
-BTN_FG       = "#577CF7"
-BG_MAIN      = "#1A1F2E"
-BG_SURFACE   = "#222840"
-BG_CARD      = "#1E2438"
-BORDER       = "#2D3A5C"
-FG_PRIMARY   = "#D8DEF0"
-FG_SECONDARY = "#7A8AB0"
-FG_MUTED     = "#4A5578"
+BG_MAIN      = "#1A1B1C"
+BG_SURFACE   = "#242526"
+BG_CARD      = "#202122"
+BORDER       = "#3A3B3C"
+BTN_BG       = "#1E2A4A"
+BTN_FG       = "#7DA4F8"
+FG_PRIMARY   = "#E0E0E0"
+FG_SECONDARY = "#909090"
+FG_MUTED     = "#555555"
 
 STYLE = f"""
-QDialog {{ background: {BG_MAIN}; }}
-QLabel  {{ color: {FG_PRIMARY}; background: transparent; }}
+QDialog  {{ background: {BG_MAIN}; }}
+QLabel   {{ color: {FG_PRIMARY}; background: transparent; }}
+QFrame#divider {{ background: {BORDER}; border: none; }}
 QPushButton {{
     background: {BTN_BG};
     color: {BTN_FG};
     border: 1px solid {BORDER};
-    border-radius: 6px;
+    border-radius: 5px;
     padding: 6px 20px;
     font-size: 9pt;
 }}
 QPushButton:hover {{
-    background: #1C3A7A;
+    background: #263A6A;
     color: {ACCENT};
     border-color: {ACCENT};
 }}
-QPushButton:pressed {{
-    background: {ACCENT_DARK};
-}}
+QPushButton:pressed {{ background: #141E38; }}
 QScrollArea {{ border: none; background: transparent; }}
 QScrollBar:vertical {{
     background: {BG_MAIN};
@@ -48,7 +45,7 @@ QScrollBar:vertical {{
 }}
 QScrollBar::handle:vertical {{
     background: {BORDER};
-    border-radius: 3px;
+    border-radius: 2px;
     min-height: 20px;
 }}
 QScrollBar::add-line:vertical,
@@ -100,20 +97,19 @@ LICENSES = [
     },
 ]
 
-# 라이선스 유형별 배지 색상
-_LICENSE_BADGE = {
-    "GPL"       : ("#2A1525", "#F06292"),
-    "Apache"    : ("#122030", "#5D87F6"),
-    "BSD"       : ("#122820", "#34D399"),
-    "PSF"       : ("#1A2030", "#7A8AB0"),
-    "Commercial": ("#201520", "#A78BFA"),
+_BADGE = {
+    "GPL"       : ("#2A1520", "#F06292"),
+    "Apache"    : ("#1A2038", "#5D87F6"),
+    "BSD"       : ("#182420", "#34D399"),
+    "PSF"       : ("#222324", "#909090"),
+    "Commercial": ("#1E1A28", "#A78BFA"),
 }
 
-def _badge_colors(license_str: str):
-    for key, colors in _LICENSE_BADGE.items():
-        if key in license_str:
-            return colors
-    return ("#1A2030", "#7A8AB0")
+def _badge(lic: str):
+    for k, v in _BADGE.items():
+        if k in lic:
+            return v
+    return ("#222324", "#909090")
 
 
 class LicenseDialog(QDialog):
@@ -126,45 +122,63 @@ class LicenseDialog(QDialog):
 
     def _build_ui(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(18, 18, 18, 14)
-        layout.setSpacing(10)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
         # 헤더
-        hdr = QLabel("이 프로그램은 아래 오픈소스 라이브러리를 사용합니다.")
-        hdr.setFont(QFont("Malgun Gothic", 9))
-        hdr.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent;")
-        layout.addWidget(hdr)
+        header = QWidget()
+        header.setStyleSheet(f"background: {BG_SURFACE};")
+        h_lay = QVBoxLayout()
+        h_lay.setContentsMargins(18, 12, 18, 10)
+        h_lay.setSpacing(0)
+        hdr_lbl = QLabel("이 프로그램은 아래 오픈소스 라이브러리를 사용합니다.")
+        hdr_lbl.setFont(QFont("Malgun Gothic", 9))
+        hdr_lbl.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent;")
+        h_lay.addWidget(hdr_lbl)
+        header.setLayout(h_lay)
+        layout.addWidget(header)
 
-        # 스크롤 영역
+        div = QFrame()
+        div.setObjectName("divider")
+        div.setFixedHeight(1)
+        layout.addWidget(div)
+
+        # 스크롤
+        body = QWidget()
+        body.setStyleSheet(f"background: {BG_MAIN};")
+        b_lay = QVBoxLayout()
+        b_lay.setContentsMargins(0, 0, 0, 0)
+        b_lay.setSpacing(0)
+
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
 
         container = QWidget()
-        container.setObjectName("lic_container")
-        container.setStyleSheet(f"QWidget#lic_container {{ background: {BG_MAIN}; }}")
+        container.setObjectName("lic_cont")
+        container.setStyleSheet(f"QWidget#lic_cont {{ background: {BG_MAIN}; }}")
         vbox = QVBoxLayout()
-        vbox.setContentsMargins(0, 0, 8, 0)
-        vbox.setSpacing(8)
+        vbox.setContentsMargins(16, 12, 16, 8)
+        vbox.setSpacing(6)
 
         for i, lib in enumerate(LICENSES):
             card = QWidget()
-            card.setObjectName(f"lic_card_{i}")
+            card.setObjectName(f"lc_{i}")
             card.setStyleSheet(f"""
-                QWidget#lic_card_{i} {{
+                QWidget#lc_{i} {{
                     background: {BG_CARD};
                     border: none;
                     border-left: 3px solid {ACCENT};
-                    border-radius: 6px;
+                    border-radius: 5px;
                 }}
             """)
             cl = QVBoxLayout()
-            cl.setContentsMargins(14, 10, 14, 10)
-            cl.setSpacing(4)
+            cl.setContentsMargins(14, 9, 14, 9)
+            cl.setSpacing(3)
 
             # 이름 행
-            row_top = QHBoxLayout()
-            row_top.setSpacing(8)
+            top = QHBoxLayout()
+            top.setSpacing(7)
 
             lbl_name = QLabel(lib["name"])
             lbl_name.setFont(QFont("Malgun Gothic", 10, QFont.Bold))
@@ -174,32 +188,25 @@ class LicenseDialog(QDialog):
             lbl_ver.setFont(QFont("Malgun Gothic", 8))
             lbl_ver.setStyleSheet(f"color: {FG_MUTED}; background: transparent;")
 
-            # 라이선스 배지
-            bg_c, fg_c = _badge_colors(lib["license"])
+            bg_c, fg_c = _badge(lib["license"])
             lbl_lic = QLabel(lib["license"])
             lbl_lic.setFont(QFont("Malgun Gothic", 8))
             lbl_lic.setStyleSheet(
-                f"color: {fg_c};"
-                f"background: {bg_c};"
-                f"border-radius: 4px;"
-                f"padding: 1px 8px;"
+                f"color:{fg_c}; background:{bg_c}; border-radius:3px; padding:1px 7px;"
             )
-            lbl_lic.setAlignment(Qt.AlignVCenter)
 
-            row_top.addWidget(lbl_name)
-            row_top.addWidget(lbl_ver)
-            row_top.addStretch()
-            row_top.addWidget(lbl_lic)
-            cl.addLayout(row_top)
+            top.addWidget(lbl_name)
+            top.addWidget(lbl_ver)
+            top.addStretch()
+            top.addWidget(lbl_lic)
+            cl.addLayout(top)
 
-            # 설명
             lbl_desc = QLabel(lib["desc"])
             lbl_desc.setFont(QFont("Malgun Gothic", 8))
             lbl_desc.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent;")
             lbl_desc.setWordWrap(True)
             cl.addWidget(lbl_desc)
 
-            # URL
             lbl_url = QLabel(
                 f"<a href='{lib['url']}' style='color:{ACCENT}; text-decoration:none;'>"
                 f"↗ {lib['url']}</a>"
@@ -215,11 +222,22 @@ class LicenseDialog(QDialog):
         vbox.addStretch()
         container.setLayout(vbox)
         scroll.setWidget(container)
-        layout.addWidget(scroll)
+
+        b_lay.addWidget(scroll)
+        body.setLayout(b_lay)
+        layout.addWidget(body)
 
         # 닫기 버튼
+        footer = QWidget()
+        footer.setStyleSheet(f"background: {BG_MAIN};")
+        f_lay = QHBoxLayout()
+        f_lay.setContentsMargins(18, 8, 18, 14)
         btn_close = QPushButton("닫기")
         btn_close.clicked.connect(self.accept)
-        layout.addWidget(btn_close, alignment=Qt.AlignCenter)
+        f_lay.addStretch()
+        f_lay.addWidget(btn_close)
+        f_lay.addStretch()
+        footer.setLayout(f_lay)
+        layout.addWidget(footer)
 
         self.setLayout(layout)
