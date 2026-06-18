@@ -99,7 +99,8 @@ class FloatingWidget(QWidget):
         self._fetcher: _PriceFetcher | None = None
 
         # 로딩 상태 플래그
-        self._loading = True
+        self._loading  = True
+        self._fetching = False   # 비동기 fetch 진행 중 여부
 
         logger.info(f"FloatingWidget init: {len(self.stocks)} stocks")
         self._build_ui()
@@ -185,9 +186,10 @@ class FloatingWidget(QWidget):
         fs = self.cfg.get("font_size", 9)
         fc = self.cfg.get("font_color", FG_DEFAULT)
 
-        # ── 로딩 중 표시 ────────────────────────────────────────────────────
-        if self._loading and not self._price_cache:
-            self._show_loading_ui(fs)
+        # ── 로딩 중 또는 fetch 진행 중 표시 ─────────────────────────────────
+        if (self._loading or self._fetching) and not self._price_cache:
+            msg = "프로그램 준비중..." if self._loading else "데이터 불러오는 중"
+            self._show_loading_ui(fs, msg)
             return
 
         # ── 종목 없을 때 안내 ────────────────────────────────────────────────
@@ -315,18 +317,18 @@ class FloatingWidget(QWidget):
         self._resize_to_content()
         logger.debug(f"table rebuilt: {row_count}r x {col_count}c")
 
-    def _show_loading_ui(self, fs: int):
-        """가격 조회 중 가로형 로딩 UI"""
+    def _show_loading_ui(self, fs: int, text: str = "프로그램 준비중..."):
+        """가격 조회 중 가로형 로딩 UI (매우 얇은 바)"""
         row = QHBoxLayout()
-        row.setContentsMargins(14, 8, 14, 8)
-        row.setSpacing(8)
+        row.setContentsMargins(10, 3, 10, 3)   # 위/아래 여백 최소화 → 얇은 바
+        row.setSpacing(6)
 
         dot = QLabel("●")
-        dot.setFont(QFont("Malgun Gothic", fs - 1))
+        dot.setFont(QFont("Malgun Gothic", fs - 2))
         dot.setStyleSheet(f"color: {ACCENT}; background: transparent;")
 
-        lbl = QLabel("프로그램 준비중...")
-        lbl.setFont(QFont("Malgun Gothic", fs))
+        lbl = QLabel(text)
+        lbl.setFont(QFont("Malgun Gothic", fs - 1))
         lbl.setStyleSheet(f"color: {FG_DEFAULT}; background: transparent;")
 
         row.addWidget(dot)
@@ -336,7 +338,8 @@ class FloatingWidget(QWidget):
         wrapper = QWidget()
         wrapper.setStyleSheet("background: transparent;")
         wrapper.setLayout(row)
-        wrapper.setMinimumWidth(180)
+        wrapper.setMinimumWidth(160)
+        wrapper.setMaximumHeight(fs + 14)   # 폰트 크기 + 소량의 여백으로 높이 제한
 
         self.card_layout.addWidget(wrapper)
         self._resize_to_content()
@@ -385,7 +388,8 @@ class FloatingWidget(QWidget):
     def update_prices(self):
         """비동기로 가격 조회 시작."""
         if not self.stocks:
-            self._loading = False
+            self._loading  = False
+            self._fetching = False
             self._resize_to_content()
             return
 
@@ -407,6 +411,8 @@ class FloatingWidget(QWidget):
                 pass   # 이미 파괴된 경우 무시
             self._fetcher = None
 
+        self._fetching = True   # fetch 시작 → 로딩 표시 활성화
+
         fetcher = _PriceFetcher(self.stocks)
         fetcher.done.connect(self._on_prices_fetched)
         # finished 시 _fetcher 포인터만 None 으로 — deleteLater 사용 안 함
@@ -420,11 +426,13 @@ class FloatingWidget(QWidget):
 
     def _on_prices_fetched(self, results: list):
         """백그라운드 조회 완료 → UI 갱신"""
-        was_loading = self._loading
-        self._loading = False   # 첫 조회 완료 → 로딩 플래그 해제
+        was_loading  = self._loading
+        was_fetching = self._fetching
+        self._loading  = False   # 첫 조회 완료 → 로딩 플래그 해제
+        self._fetching = False   # fetch 완료 → fetching 플래그 해제
 
-        if was_loading:
-            # 로딩 화면을 실제 테이블로 교체
+        if was_loading or (was_fetching and self.table is None):
+            # 로딩/fetching 화면을 실제 테이블로 교체
             self._rebuild_table()
             # _rebuild_table 이 완료되면 아래 코드에서 결과를 반영
             if self.table is None:
@@ -564,13 +572,15 @@ class FloatingWidget(QWidget):
         self.show()
 
         self.timer.start(max(3000, cfg.get("interval_ms", 10000)))
+        self._fetching = True   # 저장 직후 데이터 재조회 중 표시
         self._rebuild_table()
         self.update_prices()
 
     def apply_stocks(self, stocks: list):
         """종목 저장 후 즉시 반영"""
         logger.info(f"apply_stocks called: {len(stocks)} items")
-        self.stocks = [s for s in stocks if s.get("active", True)]
+        self.stocks  = [s for s in stocks if s.get("active", True)]
+        self._fetching = True   # 저장 직후 데이터 재조회 중 표시
         self._rebuild_table()
         self.update_prices()
 

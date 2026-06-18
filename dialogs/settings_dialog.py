@@ -8,7 +8,7 @@ from __future__ import annotations
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QSlider, QSpinBox, QCheckBox, QGroupBox, QGridLayout,
-    QMessageBox,
+    QMessageBox, QColorDialog,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QColor
@@ -28,20 +28,6 @@ FG_PRIMARY   = "#E0E0E0"   # 주요 텍스트
 FG_SECONDARY = "#909090"   # 보조 텍스트
 FG_MUTED     = "#555555"   # 희미한 텍스트
 
-PRESET_COLORS = [
-    "#5D87F6",  # ACCENT 파랑
-    "#7DA4F8",  # 밝은 파랑
-    "#3A6AE0",  # 진한 파랑
-    "#A78BFA",  # 보라
-    "#67E8F9",  # 시안
-    "#34D399",  # 민트
-    "#F06292",  # 분홍
-    "#FF8A65",  # 주황
-    "#FFD700",  # 골드
-    "#E0E0E0",  # 밝은 그레이
-    "#909090",  # 중간 그레이
-    "#555555",  # 어두운 그레이
-]
 
 STYLE = f"""
 QDialog {{
@@ -162,25 +148,22 @@ QPushButton#btn_cancel:hover {{
 
 
 class ColorButton(QPushButton):
-    """색상 선택 버튼 — 선택된 색상을 배경으로 표시"""
+    """색상 선택 버튼 — 선택된 색상을 배경 스와치로만 표시 (텍스트 없음)"""
     color_changed = pyqtSignal(str)
 
     def __init__(self, color: str = "#909090"):
         super().__init__()
-        self.setFixedSize(68, 26)
+        self.setFixedSize(44, 26)
         self._color = color
         self._apply()
         self.clicked.connect(self._pick)
 
     def _apply(self):
-        c = QColor(self._color)
-        lum = 0.299 * c.red() + 0.587 * c.green() + 0.114 * c.blue()
-        text_col = "#1A1B1C" if lum > 128 else "#E0E0E0"
         self.setStyleSheet(
-            f"background: {self._color}; color: {text_col};"
-            f"border: 1px solid {BORDER}; border-radius: 5px; font-size: 8pt;"
+            f"background: {self._color};"
+            f"border: 1px solid {BORDER}; border-radius: 5px;"
         )
-        self.setText(self._color.upper())
+        self.setText("")  # 텍스트 없음 — 색상 스와치만 표시
 
     def set_color(self, hex_color: str):
         self._color = hex_color
@@ -190,74 +173,21 @@ class ColorButton(QPushButton):
         return self._color
 
     def _pick(self):
-        dlg = ColorPickerDialog(self._color, self)
-        if dlg.exec_() == QDialog.Accepted:
-            color = dlg.get_color()
-            self.set_color(color)
-            self.color_changed.emit(color)
+        # QColorDialog — 그림판 수준의 풀 HSV 컬러 휠/스펙트럼 선택
+        initial = QColor(self._color)
+        color = QColorDialog.getColor(
+            initial, self,
+            "색상 선택",
+            QColorDialog.ShowAlphaChannel,
+        )
+        if color.isValid():
+            hex_color = color.name()  # '#rrggbb'
+            self.set_color(hex_color)
+            self.color_changed.emit(hex_color)
 
 
-class ColorPickerDialog(QDialog):
-    """12개 프리셋 색상 선택"""
-
-    def __init__(self, current: str, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("색상 선택")
-        self.setFixedSize(316, 136)
-        self.setStyleSheet(f"""
-            QDialog  {{ background: {BG_MAIN}; }}
-            QLabel   {{ color: {FG_PRIMARY}; background: transparent; }}
-            QPushButton {{
-                background: {BTN_BG}; color: {BTN_FG};
-                border: 1px solid {BORDER}; border-radius: 5px; padding: 4px 12px;
-            }}
-            QPushButton:hover {{ background: #263A6A; color: {ACCENT}; border-color: {ACCENT}; }}
-        """)
-        self._color = current
-        self._build_ui()
-
-    def _build_ui(self):
-        layout = QVBoxLayout()
-        layout.setContentsMargins(12, 12, 12, 10)
-        layout.setSpacing(8)
-
-        grid = QGridLayout()
-        grid.setSpacing(4)
-        for i, color in enumerate(PRESET_COLORS):
-            btn = QPushButton()
-            btn.setFixedSize(36, 36)
-            is_sel = color.lower() == self._color.lower()
-            b_w = "3px" if is_sel else "1px"
-            b_c = ACCENT if is_sel else BORDER
-            btn.setStyleSheet(f"""
-                QPushButton {{
-                    background: {color};
-                    border: {b_w} solid {b_c};
-                    border-radius: 5px;
-                }}
-                QPushButton:hover {{ border: 2px solid {ACCENT}; }}
-            """)
-            btn.clicked.connect(lambda _, c=color: self._pick(c))
-            grid.addWidget(btn, i // 6, i % 6)
-        layout.addLayout(grid)
-
-        row = QHBoxLayout()
-        btn_ok     = QPushButton("확인")
-        btn_cancel = QPushButton("취소")
-        btn_ok.clicked.connect(self.accept)
-        btn_cancel.clicked.connect(self.reject)
-        row.addStretch()
-        row.addWidget(btn_ok)
-        row.addWidget(btn_cancel)
-        layout.addLayout(row)
-        self.setLayout(layout)
-
-    def _pick(self, color: str):
-        self._color = color
-        self.accept()
-
-    def get_color(self) -> str:
-        return self._color
+# ColorPickerDialog 는 더 이상 사용하지 않음.
+# ColorButton._pick() 에서 QColorDialog.getColor() 를 직접 호출함.
 
 
 class SettingsDialog(QDialog):
@@ -295,11 +225,11 @@ class SettingsDialog(QDialog):
         self.sld_alpha.setRange(0, 11)
         alpha_step = round((self.cfg.get("bg_alpha", 220) - 30) / 225 * 11)
         self.sld_alpha.setValue(max(0, min(11, alpha_step)))
-        self.lbl_alpha = QLabel(str(self._step_to_alpha(self.sld_alpha.value())))
-        self.lbl_alpha.setFixedWidth(30)
+        self.lbl_alpha = QLabel(str(self.sld_alpha.value() + 1))  # 1~12 단계 표시
+        self.lbl_alpha.setFixedWidth(24)
         self.lbl_alpha.setStyleSheet(f"color: {FG_SECONDARY}; background: transparent;")
         self.sld_alpha.valueChanged.connect(
-            lambda v: self.lbl_alpha.setText(str(self._step_to_alpha(v)))
+            lambda v: self.lbl_alpha.setText(str(v + 1))  # 0→"1", 11→"12"
         )
         row_a = QHBoxLayout()
         row_a.setSpacing(6)
