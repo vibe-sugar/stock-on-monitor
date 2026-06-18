@@ -418,10 +418,10 @@ class FloatingWidget(QWidget):
             for c in range(col_count):
                 tbl.setItem(sr, c, QTableWidgetItem(""))
             self.sum_current_item = self._make_item(
-                "--", fs - 1, Qt.AlignLeft | Qt.AlignVCenter, ACCENT)
+                "--", fs - 1, Qt.AlignLeft | Qt.AlignVCenter, fc)
             tbl.setItem(sr, 0, self.sum_current_item)
             self.sum_profit_item = self._make_item(
-                "--", fs - 1, Qt.AlignRight | Qt.AlignVCenter, ACCENT)
+                "--", fs - 1, Qt.AlignRight | Qt.AlignVCenter, fc)
             tbl.setItem(sr, col_count - 1, self.sum_profit_item)
 
         tbl.resizeColumnsToContents()
@@ -498,7 +498,7 @@ class FloatingWidget(QWidget):
         pft_pct = (cur - buy) / buy * 100 if buy != 0 else 0.0
         total   = cur * qty
 
-        arrow   = "▲" if chg > 0 else ("▼" if chg < 0 else "─")
+        arrow   = "▲" if chg > 0 else ("▼" if chg < 0 else "")
         c_col   = self._change_color(chg)
         p_col   = self._change_color(pft_amt)
         use_clr = self.cfg.get("use_change_color", True)
@@ -518,10 +518,12 @@ class FloatingWidget(QWidget):
         if "change" in rd:
             show_amt = self.cfg.get("show_change_amt", False)
             show_pct = self.cfg.get("show_change_pct", False)
-            if show_amt and show_pct:
-                txt = f"{arrow}{chg:+,.0f}({chg_pct:+.2f}%)"
+            if chg == 0:
+                txt = "-"
+            elif show_amt and show_pct:
+                txt = f"{arrow}{abs(chg):,.0f}({chg_pct:+.2f}%)"
             elif show_amt:
-                txt = f"{arrow}{chg:+,.0f}"
+                txt = f"{arrow}{abs(chg):,.0f}"
             else:
                 txt = f"{arrow}{chg_pct:+.2f}%"
             rd["change"].setText(txt)
@@ -530,10 +532,12 @@ class FloatingWidget(QWidget):
         if "profit" in rd:
             show_amt = self.cfg.get("show_profit_amt", False)
             show_pct = self.cfg.get("show_profit_pct", False)
-            p_arrow  = "▲" if pft_amt > 0 else ("▼" if pft_amt < 0 else "─")
+            p_arrow  = "▲" if pft_amt > 0 else ("▼" if pft_amt < 0 else "")
             abs_amt  = abs(pft_amt)
             abs_pct  = abs(pft_pct)
-            if show_amt and show_pct:
+            if pft_amt == 0:
+                txt = "-"
+            elif show_amt and show_pct:
                 a = f"{int(abs_amt):,}" if abs_amt == int(abs_amt) else f"{abs_amt:,.2f}"
                 txt = f"{p_arrow}{a}({abs_pct:.2f}%)"
             elif show_amt:
@@ -551,16 +555,16 @@ class FloatingWidget(QWidget):
             rd["total"].setForeground(QBrush(QColor(fc)))
 
     def _fill_summary(self, total_buy: float, total_cur: float, fc: str):
-        """합산행 — 항상 ACCENT (증감 색상 미적용)"""
+        """합산행 — 폰트 색상(fc) 고정, 증감 색상 미적용"""
         if self.summary_row < 0 or not self.sum_current_item or not self.sum_profit_item:
             return
         total_pft     = total_cur - total_buy
         total_pft_pct = (total_pft / total_buy * 100) if total_buy > 0 else 0.0
         sign          = "+" if total_pft >= 0 else ""
         self.sum_current_item.setText(f"총{int(total_cur):,}")
-        self.sum_current_item.setForeground(QBrush(QColor(ACCENT)))
+        self.sum_current_item.setForeground(QBrush(QColor(fc)))
         self.sum_profit_item.setText(f"{sign}{int(total_pft):,} ({total_pft_pct:+.2f}%)")
-        self.sum_profit_item.setForeground(QBrush(QColor(ACCENT)))
+        self.sum_profit_item.setForeground(QBrush(QColor(fc)))
 
     def _resize_to_content(self):
         if self.card:
