@@ -2,11 +2,13 @@
 FloatingWidget  —  주식 정보 플로팅 위젯
 
 버그 수정:
-  - _PriceFetcher: deleteLater + _fetcher=None 을 finished 시그널로 처리
-    → "wrapped C/C++ object has been deleted" RuntimeError 완전 해결
-  - 가격 조회 중 "프로그램 준비중..." 가로형 로딩 UI 표시
+  - _PriceFetcher: quit()+wait() 로 안전 종료, deleteLater 미사용
+    → "Destroyed while thread is still running" 완전 해결
+  - 가격 조회 중 로딩 UI 표시 (_loading / _fetching 플래그)
 드래그: table + viewport 양쪽에 eventFilter 설치
 즉시갱신: 설정/종목 저장 후 캐시로 즉시 표시, 비동기 새로고침
+컬럼 합산: change_amt+change_pct → change 단일 컬럼 (▲500(5.00%) 형식)
+증감 색상: use_change_color 일 때 해당 행 전체(종목명 포함) 색상 적용
 """
 
 from __future__ import annotations
@@ -30,7 +32,7 @@ FG_DEFAULT = "#E0E0E0"   # 주요 텍스트
 FG_DIM     = "#606060"   # 희미한 텍스트
 BG_CARD    = "#1A1B1C"   # 플로팅 카드 기본 배경
 
-# 하위 호환성 alias (변동색 로직에서 사용)
+# 하위 호환성 alias
 BLUE_ACCENT = ACCENT
 BLUE_LIGHT  = RISE_COLOR
 RED_SOFT    = FALL_COLOR
@@ -94,12 +96,14 @@ class FloatingWidget(QWidget):
         self.sum_current_item = None
         self.sum_profit_item  = None
 
-        # ── 비동기 fetcher ── 절대 deleteLater 로 날리지 않음
-        # finished 시그널로 None 처리만 하고, 객체 수명은 self 가 관리
+        # ── 비동기 fetcher 관리 ──────────────────────────────────────────────
+        # ★ 절대 deleteLater 사용 금지 ★
+        # finished 시그널로 포인터만 None 처리, 수명은 self 가 관리
+        # 이전 fetcher 교체 시 wait() 로 완전 종료 확인 후 참조 해제
         self._fetcher: _PriceFetcher | None = None
 
         # 로딩 상태 플래그
-        self._loading  = True
+        self._loading  = True    # 프로그램 최초 시작 중
         self._fetching = False   # 비동기 fetch 진행 중 여부
 
         logger.info(f"FloatingWidget init: {len(self.stocks)} stocks")
@@ -186,10 +190,14 @@ class FloatingWidget(QWidget):
         fs = self.cfg.get("font_size", 9)
         fc = self.cfg.get("font_color", FG_DEFAULT)
 
-        # ── 로딩 중 또는 fetch 진행 중 표시 ─────────────────────────────────
-        if (self._loading or self._fetching) and not self._price_cache:
-            msg = "프로그램 준비중..." if self._loading else "데이터 불러오는 중"
-            self._show_loading_ui(fs, msg)
+        # ── 로딩 중 또는 fetch 진행 중 표시 ────────────────────────────────
+        # ★ _fetching 중이면 캐시 유무와 무관하게 항상 로딩 문구 표시 ★
+        if self._loading and not self._price_cache:
+            self._show_loading_ui(fs, "프로그램 준비중...")
+            return
+
+        if self._fetching and not self._price_cache:
+            self._show_loading_ui(fs, "데이터 불러오는 중")
             return
 
         # ── 종목 없을 때 안내 ────────────────────────────────────────────────
@@ -205,25 +213,27 @@ class FloatingWidget(QWidget):
             return
 
         # ── 열 구성 ─────────────────────────────────────────────────────────
+        # change_amt / change_pct 를 하나의 "change" 컬럼으로 합산
+        # show_change_amt=True  → ▲500
+        # show_change_pct=True  → ▲5.00%
+        # 둘 다 True            → ▲500(5.00%)
         col_map: dict[str, int] = {}
         idx = 0
 
-        if self.cfg.get("show_name"):    col_map["name"]       = idx; idx += 1
-        if self.cfg.get("show_code"):    col_map["code"]       = idx; idx += 1
+        if self.cfg.get("show_name"):    col_map["name"]  = idx; idx += 1
+        if self.cfg.get("show_code"):    col_map["code"]  = idx; idx += 1
 
         col_map["price"] = idx; idx += 1
 
-        if self.cfg.get("show_change_amt"):
-            col_map["change_amt"] = idx; idx += 1
-        elif self.cfg.get("show_change_pct"):
-            col_map["change_pct"] = idx; idx += 1
+        # change: amt와 pct 중 하나 이상 켜져 있으면 단일 컬럼
+        if self.cfg.get("show_change_amt") or self.cfg.get("show_change_pct"):
+            col_map["change"] = idx; idx += 1
 
-        if self.cfg.get("show_profit_amt"):
-            col_map["profit_amt"] = idx; idx += 1
-        elif self.cfg.get("show_profit_pct"):
-            col_map["profit_pct"] = idx; idx += 1
+        # profit: amt와 pct 중 하나 이상 켜져 있으면 단일 컬럼
+        if self.cfg.get("show_profit_amt") or self.cfg.get("show_profit_pct"):
+            col_map["profit"] = idx; idx += 1
 
-        if self.cfg.get("show_total"):   col_map["total"]      = idx; idx += 1
+        if self.cfg.get("show_total"):   col_map["total"] = idx; idx += 1
 
         self.col_map = col_map
         col_count    = idx
@@ -234,7 +244,7 @@ class FloatingWidget(QWidget):
             self.summary_row = row_count
             row_count += 1
 
-        # ── QTableWidget ──────────────────────────────────────────────────────
+        # ── QTableWidget ─────────────────────────────────────────────────────
         tbl = QTableWidget(row_count, col_count)
         tbl.setStyleSheet("""
             QTableWidget {
@@ -263,7 +273,6 @@ class FloatingWidget(QWidget):
         # ── 데이터 행 초기화 ────────────────────────────────────────────────
         for row, stock in enumerate(self.stocks):
             rd: dict[str, QTableWidgetItem] = {}
-            code = stock.get("code", "")
 
             if "name" in col_map:
                 it = self._make_item(stock.get("name", ""), fs - 1,
@@ -272,7 +281,7 @@ class FloatingWidget(QWidget):
                 rd["name"] = it
 
             if "code" in col_map:
-                it = self._make_item(code, fs - 1,
+                it = self._make_item(stock.get("code", ""), fs - 1,
                                      Qt.AlignLeft | Qt.AlignVCenter, FG_DIM)
                 tbl.setItem(row, col_map["code"], it)
                 rd["code"] = it
@@ -281,7 +290,7 @@ class FloatingWidget(QWidget):
             tbl.setItem(row, col_map["price"], it)
             rd["price"] = it
 
-            for key in ("change_amt", "change_pct", "profit_amt", "profit_pct", "total"):
+            for key in ("change", "profit", "total"):
                 if key in col_map:
                     it = self._make_item("--", fs - 1,
                                          Qt.AlignRight | Qt.AlignVCenter, fc)
@@ -318,17 +327,17 @@ class FloatingWidget(QWidget):
         logger.debug(f"table rebuilt: {row_count}r x {col_count}c")
 
     def _show_loading_ui(self, fs: int, text: str = "프로그램 준비중..."):
-        """가격 조회 중 가로형 로딩 UI (매우 얇은 바)"""
+        """가격 조회 중 가로형 로딩 UI — 문구만 보이는 얇은 바"""
         row = QHBoxLayout()
-        row.setContentsMargins(10, 3, 10, 3)   # 위/아래 여백 최소화 → 얇은 바
-        row.setSpacing(6)
+        row.setContentsMargins(10, 2, 10, 2)   # 위/아래 최소 여백
+        row.setSpacing(5)
 
         dot = QLabel("●")
-        dot.setFont(QFont("Malgun Gothic", fs - 2))
+        dot.setFont(QFont("Malgun Gothic", max(6, fs - 2)))
         dot.setStyleSheet(f"color: {ACCENT}; background: transparent;")
 
         lbl = QLabel(text)
-        lbl.setFont(QFont("Malgun Gothic", fs - 1))
+        lbl.setFont(QFont("Malgun Gothic", fs))
         lbl.setStyleSheet(f"color: {FG_DEFAULT}; background: transparent;")
 
         row.addWidget(dot)
@@ -339,8 +348,10 @@ class FloatingWidget(QWidget):
         wrapper.setStyleSheet("background: transparent;")
         wrapper.setLayout(row)
         wrapper.setMinimumWidth(160)
-        wrapper.setMaximumHeight(fs + 14)   # 폰트 크기 + 소량의 여백으로 높이 제한
+        # 높이 = 폰트 크기 + 위아래 여백(4) + 약간의 여유(4)
+        wrapper.setFixedHeight(fs + 12)
 
+        self.card_layout.setContentsMargins(10, 4, 10, 4)  # 카드 자체 여백도 최소화
         self.card_layout.addWidget(wrapper)
         self._resize_to_content()
 
@@ -393,35 +404,43 @@ class FloatingWidget(QWidget):
             self._resize_to_content()
             return
 
-        # ── 핵심 버그 수정 ────────────────────────────────────────────────────
-        # 이전 방식: fetcher.finished.connect(fetcher.deleteLater)
-        #   → Qt 가 deleteLater 로 C++ 객체를 먼저 파괴한 후
-        #     Python _fetcher 포인터가 dangling → isRunning() 호출 시 RuntimeError
-        #
-        # 수정 방식: _fetcher 수명을 self 가 직접 관리
-        #   → finished 시그널로 _fetcher = None 만 처리
-        #   → 이전 fetcher 가 살아있으면 신호 차단 후 quit/wait 로 안전 종료
+        # ── 이전 fetcher 안전 종료 ──────────────────────────────────────────
+        # ★ 핵심: quit() 후 wait()로 스레드가 완전히 끝날 때까지 대기 ★
+        # wait() 없이 _fetcher = None 을 하면 Python GC 가 QThread 객체를
+        # 파괴할 때 스레드가 아직 실행 중 → "Destroyed while thread is still running"
         if self._fetcher is not None:
             try:
                 if self._fetcher.isRunning():
-                    self._fetcher.done.disconnect()
+                    # done 시그널 연결 끊기 (중복 _on_prices_fetched 방지)
+                    try:
+                        self._fetcher.done.disconnect(self._on_prices_fetched)
+                    except (TypeError, RuntimeError):
+                        pass
+                    # finished 시그널 연결 끊기
+                    try:
+                        self._fetcher.finished.disconnect(self._on_fetcher_finished)
+                    except (TypeError, RuntimeError):
+                        pass
                     self._fetcher.quit()
-                    self._fetcher.wait(500)
+                    # 최대 2초 대기 — 네트워크 요청이 있으므로 여유 있게
+                    if not self._fetcher.wait(2000):
+                        # 2초 후에도 종료 안 되면 강제 종료 (최후 수단)
+                        self._fetcher.terminate()
+                        self._fetcher.wait(1000)
             except RuntimeError:
-                pass   # 이미 파괴된 경우 무시
+                pass   # C++ 객체 이미 파괴된 경우 무시
             self._fetcher = None
 
         self._fetching = True   # fetch 시작 → 로딩 표시 활성화
 
         fetcher = _PriceFetcher(self.stocks)
         fetcher.done.connect(self._on_prices_fetched)
-        # finished 시 _fetcher 포인터만 None 으로 — deleteLater 사용 안 함
         fetcher.finished.connect(self._on_fetcher_finished)
         self._fetcher = fetcher
         fetcher.start()
 
     def _on_fetcher_finished(self):
-        """스레드 종료 시 포인터만 정리 (객체 파괴 X)"""
+        """스레드 종료 시 포인터만 정리 (객체 파괴 X — deleteLater 절대 사용 안 함)"""
         self._fetcher = None
 
     def _on_prices_fetched(self, results: list):
@@ -434,7 +453,6 @@ class FloatingWidget(QWidget):
         if was_loading or (was_fetching and self.table is None):
             # 로딩/fetching 화면을 실제 테이블로 교체
             self._rebuild_table()
-            # _rebuild_table 이 완료되면 아래 코드에서 결과를 반영
             if self.table is None:
                 return
 
@@ -486,44 +504,74 @@ class FloatingWidget(QWidget):
         c_col = self._change_color(chg)
         p_col = self._change_color(pft_amt)
 
+        # 행 전체에 적용할 기본 글자색
+        # use_change_color 가 켜져 있으면 행 전체를 등락 색상으로 통일
+        use_color = self.cfg.get("use_change_color", True)
+        row_col   = c_col if use_color else fc  # 종목명·가격 등 모든 셀에 적용
+
+        # ── 종목명 ─────────────────────────────────────────────────────────
         if "name" in rd:
             rd["name"].setText(stock.get("name", ""))
-            rd["name"].setForeground(QBrush(QColor(fc)))
+            rd["name"].setForeground(QBrush(QColor(row_col)))
 
+        # ── 종목코드 ───────────────────────────────────────────────────────
         if "code" in rd:
             rd["code"].setText(stock.get("code", ""))
+            # 코드는 색상을 약간 dim하게 (row_col 에서 알파 조정 대신 FG_DIM 유지)
             rd["code"].setForeground(QBrush(QColor(FG_DIM)))
 
-        price_col = c_col if self.cfg.get("use_change_color") else fc
+        # ── 현재가 ─────────────────────────────────────────────────────────
         if cur == int(cur):
             rd["price"].setText(f"{int(cur):,}")
         else:
             rd["price"].setText(f"{cur:,.2f}")
-        rd["price"].setForeground(QBrush(QColor(price_col)))
+        rd["price"].setForeground(QBrush(QColor(row_col)))
 
-        if "change_amt" in rd:
-            rd["change_amt"].setText(f"{arrow}{chg:+,.0f}")
-            rd["change_amt"].setForeground(QBrush(QColor(c_col)))
-        elif "change_pct" in rd:
-            rd["change_pct"].setText(f"{arrow}{chg_pct:+.2f}%")
-            rd["change_pct"].setForeground(QBrush(QColor(c_col)))
+        # ── 변동 (change) — amt + pct 합산 컬럼 ──────────────────────────
+        if "change" in rd:
+            show_amt = self.cfg.get("show_change_amt", False)
+            show_pct = self.cfg.get("show_change_pct", False)
 
-        if "profit_amt" in rd:
-            sign = "+" if pft_amt >= 0 else ""
-            rd["profit_amt"].setText(
-                f"{sign}{int(pft_amt):,}" if pft_amt == int(pft_amt)
-                else f"{sign}{pft_amt:,.2f}"
-            )
-            rd["profit_amt"].setForeground(QBrush(QColor(p_col)))
-        elif "profit_pct" in rd:
-            rd["profit_pct"].setText(f"{pft_pct:+.2f}%")
-            rd["profit_pct"].setForeground(QBrush(QColor(p_col)))
+            if show_amt and show_pct:
+                # ▲500(5.00%) 형식
+                rd["change"].setText(f"{arrow}{chg:+,.0f}({chg_pct:+.2f}%)")
+            elif show_amt:
+                # ▲500 형식
+                rd["change"].setText(f"{arrow}{chg:+,.0f}")
+            elif show_pct:
+                # ▲5.00% 형식
+                rd["change"].setText(f"{arrow}{chg_pct:+.2f}%")
+            else:
+                rd["change"].setText("")
+            rd["change"].setForeground(QBrush(QColor(c_col)))
 
+        # ── 손익 (profit) — amt + pct 합산 컬럼 ──────────────────────────
+        if "profit" in rd:
+            show_amt = self.cfg.get("show_profit_amt", False)
+            show_pct = self.cfg.get("show_profit_pct", False)
+            p_arrow  = "▲" if pft_amt > 0 else ("▼" if pft_amt < 0 else "─")
+
+            if show_amt and show_pct:
+                # ▲49,000(49.00%) 형식
+                amt_str = (f"{int(pft_amt):+,}" if pft_amt == int(pft_amt)
+                           else f"{pft_amt:+,.2f}")
+                rd["profit"].setText(f"{p_arrow}{amt_str[1:]}({pft_pct:+.2f}%)")
+            elif show_amt:
+                amt_str = (f"{int(pft_amt):+,}" if pft_amt == int(pft_amt)
+                           else f"{pft_amt:+,.2f}")
+                rd["profit"].setText(f"{p_arrow}{amt_str[1:]}")
+            elif show_pct:
+                rd["profit"].setText(f"{p_arrow}{abs(pft_pct):.2f}%")
+            else:
+                rd["profit"].setText("")
+            rd["profit"].setForeground(QBrush(QColor(p_col)))
+
+        # ── 총평가액 ───────────────────────────────────────────────────────
         if "total" in rd:
             rd["total"].setText(
                 f"{int(total):,}" if total == int(total) else f"{total:,.2f}"
             )
-            rd["total"].setForeground(QBrush(QColor(fc)))
+            rd["total"].setForeground(QBrush(QColor(row_col)))
 
     def _fill_summary(self, total_buy: float, total_cur: float, fc: str):
         """요약 행 갱신"""
@@ -579,7 +627,7 @@ class FloatingWidget(QWidget):
     def apply_stocks(self, stocks: list):
         """종목 저장 후 즉시 반영"""
         logger.info(f"apply_stocks called: {len(stocks)} items")
-        self.stocks  = [s for s in stocks if s.get("active", True)]
+        self.stocks    = [s for s in stocks if s.get("active", True)]
         self._fetching = True   # 저장 직후 데이터 재조회 중 표시
         self._rebuild_table()
         self.update_prices()
