@@ -67,6 +67,17 @@ def main():
         )
         sys.exit(1)
 
+    # ── 광고 팝업 (프로그램 시작 시 1회만) ──────────────────────────────────
+    _ad_popup = None
+    try:
+        from ad_popup import AdPopup
+        _ad_popup = AdPopup()
+        _ad_popup.show()
+        logger.info("AdPopup launched")
+    except Exception as e:
+        # 광고 팝업 실패는 프로그램 실행을 막지 않음
+        logger.warning(f"AdPopup launch failed (non-fatal): {e}")
+
     code = app.exec_()
     logger.info(f"App exiting with code {code}")
     sys.exit(code)
