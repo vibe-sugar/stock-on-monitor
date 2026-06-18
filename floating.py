@@ -109,8 +109,8 @@ class FloatingWidget(QWidget):
         self.timer.timeout.connect(self.update_prices)
         self.timer.start(max(3000, self.cfg.get("interval_ms", 10000)))
 
-        # 최초 조회 — 아직 _state=loading 이므로 fetching 으로 전환 후 시작
-        self._start_fetch()
+        # 최초 조회 — 로딩 문구 표시하면서 시작
+        self._start_fetch(show_loading=True)
 
     # ── 초기화 ──────────────────────────────────────────────────────────────
 
@@ -213,12 +213,13 @@ class FloatingWidget(QWidget):
 
     # ── fetch 시작 ────────────────────────────────────────────────────────────
 
-    def _start_fetch(self):
+    def _start_fetch(self, show_loading: bool = False):
         """
-        fetcher 시작 전 상태를 fetching 으로 전환.
-        최초 시작(loading)이라도 fetching 으로 전환해서 '데이터 불러오는 중' 표시.
-        단, 프로그램 첫 시작 시 '프로그램 준비중...' 이 먼저 표시되고
-        fetcher 시작 시 '데이터 불러오는 중' 으로 전환.
+        fetcher 를 시작.
+
+        show_loading=True  : 로딩 문구 표시 후 fetch (초기·설정/종목 저장 시)
+        show_loading=False : 백그라운드 자동 갱신 — 현재 테이블 그대로 유지,
+                             문구 전환 없음 (타이머 주기 갱신)
         """
         if not self.stocks:
             self._state = _ST_READY
@@ -246,24 +247,21 @@ class FloatingWidget(QWidget):
                 pass
             self._fetcher = None
 
-        # loading 상태였다면 fetching 으로 전환 (문구 변경)
-        if self._state == _ST_LOADING:
-            # 잠시 '프로그램 준비중...' 을 보여주고 싶다면 여기서 유지.
-            # 요청에 따라: 시작 시 '프로그램 준비중...' → fetcher 시작 시 '데이터 불러오는 중'
+        if show_loading:
+            # 로딩 문구 표시 상태로 전환
             self._set_state(_ST_FETCHING, "데이터 불러오는 중")
-        else:
-            self._set_state(_ST_FETCHING, "데이터 불러오는 중")
+        # show_loading=False 이면 _state 변경 없음 → UI 그대로 유지
 
         fetcher = _PriceFetcher(self.stocks)
         fetcher.done.connect(self._on_prices_fetched)
         fetcher.finished.connect(self._on_fetcher_finished)
         self._fetcher = fetcher
         fetcher.start()
-        logger.info("[FloatingWidget] fetcher started")
+        logger.info(f"[FloatingWidget] fetcher started (show_loading={show_loading})")
 
     def update_prices(self):
-        """타이머 / 외부에서 호출되는 갱신."""
-        self._start_fetch()
+        """타이머 주기 갱신 — 로딩 문구 없이 백그라운드에서만 갱신."""
+        self._start_fetch(show_loading=False)
 
     def _on_fetcher_finished(self):
         self._fetcher = None
@@ -593,8 +591,8 @@ class FloatingWidget(QWidget):
 
         self.timer.start(max(3000, cfg.get("interval_ms", 10000)))
 
-        # 캐시가 있으면 즉시 테이블 재빌드 후 캐시로 채움, 이후 백그라운드 갱신
-        # 캐시가 없으면 fetching 상태로 로딩 문구 표시
+        # 캐시가 있으면: 즉시 테이블 재빌드(캐시 데이터) → 백그라운드에서 조용히 갱신
+        # 캐시가 없으면: 로딩 문구 표시 → fetch 완료 후 테이블 표시
         if self._price_cache:
             self._state = _ST_READY
             self._build_table()
@@ -603,6 +601,7 @@ class FloatingWidget(QWidget):
             if self.table:
                 self.table.show()
             self._resize_to_content()
+            self._start_fetch(show_loading=False)  # 로딩 문구 없이 백그라운드 갱신
         else:
             self._state = _ST_FETCHING
             self._lbl_loading.setText("● 데이터 불러오는 중")
@@ -611,8 +610,7 @@ class FloatingWidget(QWidget):
             self._lbl_loading.show()
             self._destroy_table()
             self._resize_to_content()
-
-        self._start_fetch()
+            self._start_fetch(show_loading=True)   # 로딩 문구 유지하며 fetch
 
     def apply_stocks(self, stocks: list):
         logger.info(f"apply_stocks called: {len(stocks)} items")
@@ -627,7 +625,7 @@ class FloatingWidget(QWidget):
         self._destroy_table()
         self._resize_to_content()
 
-        self._start_fetch()
+        self._start_fetch(show_loading=True)
 
     # ── 드래그 ───────────────────────────────────────────────────────────────
 
