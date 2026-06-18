@@ -26,7 +26,7 @@ from PyQt5.QtCore import Qt, QUrl, QTimer
 from PyQt5.QtGui import QFont, QFontMetrics
 
 # ── 광고 URL ──────────────────────────────────────────────────────────────────
-AD_URL = "https://www.naver.com"
+AD_URL = "http://127.0.0.1:5000"
 
 # ── 디자인 토큰 ───────────────────────────────────────────────────────────────
 BG_CARD    = "#1A1B1C"
