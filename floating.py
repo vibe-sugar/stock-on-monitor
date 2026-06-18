@@ -527,7 +527,7 @@ class FloatingWidget(QWidget):
             else:
                 txt = f"{arrow}{chg_pct:+.2f}%"
             rd["change"].setText(txt)
-            rd["change"].setForeground(QBrush(QColor(c_col)))
+            rd["change"].setForeground(QBrush(QColor(c_col if use_clr else fc)))
 
         if "profit" in rd:
             show_amt = self.cfg.get("show_profit_amt", False)
@@ -546,7 +546,7 @@ class FloatingWidget(QWidget):
             else:
                 txt = f"{p_arrow}{abs_pct:.2f}%"
             rd["profit"].setText(txt)
-            rd["profit"].setForeground(QBrush(QColor(p_col)))
+            rd["profit"].setForeground(QBrush(QColor(p_col if use_clr else fc)))
 
         if "total" in rd:
             rd["total"].setText(

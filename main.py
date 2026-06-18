@@ -9,19 +9,51 @@ StockOnMonitor — 메인 엔트리
 
 import sys
 import os
+import subprocess
+import importlib
 
-from PyQt5.QtWidgets import QApplication, QMessageBox
+
+# ── PyQtWebEngine 사전 설치 ─────────────────────────────────────────────────
+# QApplication 생성 전에 처리해야 pip 이후 재import 가 정상 동작함
+def _ensure_webengine() -> bool:
+    """PyQtWebEngine 이 없으면 pip install 후 True 반환, 이미 있으면 False 반환."""
+    try:
+        import PyQt5.QtWebEngineWidgets  # noqa: F401
+        return True   # 이미 설치됨
+    except ImportError:
+        pass
+    try:
+        print("[INFO] PyQtWebEngine 설치 중...", flush=True)
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "--quiet", "PyQtWebEngine"],
+        )
+        # 설치 후 sys.path 에 새 패키지가 잡히도록 site-packages 재스캔
+        import site
+        importlib.invalidate_caches()
+        for sp in site.getsitepackages():
+            if sp not in sys.path:
+                sys.path.insert(0, sp)
+        import PyQt5.QtWebEngineWidgets  # noqa: F401  — 설치 확인
+        print("[INFO] PyQtWebEngine 설치 완료", flush=True)
+        return True
+    except Exception as e:
+        print(f"[WARN] PyQtWebEngine 설치 실패: {e}", file=sys.stderr, flush=True)
+        return False
+
+
+_WEBENGINE_OK = _ensure_webengine()
 
 
 def _exe_dir() -> str:
     """실행 파일(또는 스크립트)이 위치한 디렉토리 반환"""
     if getattr(sys, "frozen", False):
-        # PyInstaller 패키징 시
         return os.path.dirname(sys.executable)
     return os.path.dirname(os.path.abspath(__file__))
 
 
 def main():
+    from PyQt5.QtWidgets import QApplication, QMessageBox
+
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)   # 다이얼로그만 닫혀도 앱 종료 안 됨
 
@@ -35,7 +67,6 @@ def main():
         logger.init(data_dir)
         logger.info(f"App starting.  data_dir={data_dir}")
     except Exception as e:
-        # 로거 초기화 실패는 치명적이지 않으므로 계속 진행
         print(f"[WARN] logger init failed: {e}", file=sys.stderr)
 
     # ── 설정 / 종목 로드 ─────────────────────────────────────────────────────
@@ -68,27 +99,17 @@ def main():
         sys.exit(1)
 
     # ── 광고 팝업 (프로그램 시작 시 1회만) ──────────────────────────────────
-    # PyQtWebEngine 미설치 시 자동 pip install 후 재시도
     _ad_popup = None
-    try:
+    if _WEBENGINE_OK:
         try:
-            from PyQt5.QtWebEngineWidgets import QWebEngineView  # noqa: F401
-        except ImportError:
-            logger.info("PyQtWebEngine not found — installing...")
-            import subprocess
-            subprocess.check_call(
-                [sys.executable, "-m", "pip", "install", "PyQtWebEngine"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            logger.info("PyQtWebEngine installed")
-        from ad_popup import AdPopup
-        _ad_popup = AdPopup()
-        _ad_popup.show()
-        logger.info("AdPopup launched")
-    except Exception as e:
-        # 광고 팝업 실패는 프로그램 실행을 막지 않음
-        logger.warning(f"AdPopup launch failed (non-fatal): {e}")
+            from ad_popup import AdPopup
+            _ad_popup = AdPopup()
+            _ad_popup.show()
+            logger.info("AdPopup launched")
+        except Exception as e:
+            logger.warning(f"AdPopup launch failed (non-fatal): {e}")
+    else:
+        logger.warning("AdPopup skipped: PyQtWebEngine unavailable")
 
     code = app.exec_()
     logger.info(f"App exiting with code {code}")
